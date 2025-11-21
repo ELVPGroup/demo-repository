@@ -4,7 +4,7 @@ import { Order, OrderStatus, LogisticsProvider, DashboardStats } from '../types'
 import AMapVisualization from './AMapVisualization';
 import { generateRandomLocations, calculateDistance } from '../utils/locationUtils';
 import { CheckCircle2, Zap, Navigation, MapPin } from 'lucide-react';
-import { analyzeDeliveryPerformance } from '../services/geminiService';
+import { analyzeDeliveryPerformance } from '../services/Service';
 
 // 生成武汉周边的随机收货地址
 const WUHAN_CENTER: [number, number] = [114.335539, 30.593175];
