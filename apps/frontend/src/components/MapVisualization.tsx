@@ -24,22 +24,25 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({ orders, radius, set
     setIsDragging(true);
   };
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging || !svgRef.current) return;
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDragging || !svgRef.current) return;
 
-    const rect = svgRef.current.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
+      const rect = svgRef.current.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
 
-    const dx = e.clientX - cx;
-    const dy = e.clientY - cy;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
 
-    // Calculate distance in pixels, then convert back to km
-    const distPx = Math.sqrt(dx * dx + dy * dy);
-    const distKm = Math.min(Math.max(distPx / SCALE, 1), 48); // Clamp between 1km and 48km
+      // Calculate distance in pixels, then convert back to km
+      const distPx = Math.sqrt(dx * dx + dy * dy);
+      const distKm = Math.min(Math.max(distPx / SCALE, 1), 48); // Clamp between 1km and 48km
 
-    setRadius(distKm);
-  }, [isDragging, setRadius]);
+      setRadius(distKm);
+    },
+    [isDragging, setRadius]
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
@@ -60,24 +63,45 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({ orders, radius, set
   const radiusPx = radius * SCALE;
 
   return (
-    <div className="relative w-full h-full bg-gray-50 overflow-hidden flex items-center justify-center select-none">
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-gray-50 select-none">
       {/* Background Grid */}
-      <div className="absolute inset-0"
+      <div
+        className="absolute inset-0"
         style={{
           backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
-          backgroundSize: '40px 40px'
-        }}>
-      </div>
+          backgroundSize: '40px 40px',
+        }}
+      ></div>
 
-      <svg
-        ref={svgRef}
-        className="w-[800px] h-[800px] relative z-10"
-        viewBox="0 0 800 800"
-      >
+      <svg ref={svgRef} className="relative z-10 h-[800px] w-[800px]" viewBox="0 0 800 800">
         {/* Zones Rings (Visual guide) */}
-        <circle cx="400" cy="400" r={10 * SCALE} fill="none" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-        <circle cx="400" cy="400" r={20 * SCALE} fill="none" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
-        <circle cx="400" cy="400" r={30 * SCALE} fill="none" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4 4" />
+        <circle
+          cx="400"
+          cy="400"
+          r={10 * SCALE}
+          fill="none"
+          stroke="#e2e8f0"
+          strokeWidth="1"
+          strokeDasharray="4 4"
+        />
+        <circle
+          cx="400"
+          cy="400"
+          r={20 * SCALE}
+          fill="none"
+          stroke="#e2e8f0"
+          strokeWidth="1"
+          strokeDasharray="4 4"
+        />
+        <circle
+          cx="400"
+          cy="400"
+          r={30 * SCALE}
+          fill="none"
+          stroke="#e2e8f0"
+          strokeWidth="1"
+          strokeDasharray="4 4"
+        />
 
         {/* The Active Delivery Zone */}
         <circle
@@ -99,7 +123,7 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({ orders, radius, set
           fill="white"
           stroke="#3b82f6"
           strokeWidth="3"
-          className="cursor-ew-resize transition-transform shadow-lg"
+          className="cursor-ew-resize shadow-lg transition-transform"
         />
 
         {/* Larger invisible hit area to avoid jitter when hovering the small visual handle */}
@@ -116,7 +140,7 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({ orders, radius, set
         <text
           x={400 + radiusPx + 15}
           y="405"
-          className="text-xs font-bold fill-blue-600 pointer-events-none select-none"
+          className="pointer-events-none fill-blue-600 text-xs font-bold select-none"
         >
           {radius.toFixed(1)} km
         </text>
@@ -128,7 +152,7 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({ orders, radius, set
         </g>
 
         {/* Orders */}
-        {orders.map(order => {
+        {orders.map((order) => {
           let color = '#9ca3af'; // Default gray
           if (order.status === OrderStatus.DELIVERABLE) color = '#22c55e'; // Green
           if (order.status === OrderStatus.TIME_RISK) color = '#f97316'; // Orange
@@ -148,27 +172,27 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({ orders, radius, set
       </svg>
 
       {/* Legend Overlay */}
-      <div className="absolute top-4 right-4 bg-white/90 backdrop-blur shadow-sm p-3 rounded-lg border border-gray-200 text-xs z-20">
-        <div className="font-semibold mb-2 text-gray-700">Legend</div>
-        <div className="flex items-center mb-1">
-          <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
+      <div className="absolute top-4 right-4 z-20 rounded-lg border border-gray-200 bg-white/90 p-3 text-xs shadow-sm backdrop-blur">
+        <div className="mb-2 font-semibold text-gray-700">Legend</div>
+        <div className="mb-1 flex items-center">
+          <div className="mr-2 h-2 w-2 rounded-full bg-green-500"></div>
           <span>Normal Delivery</span>
         </div>
-        <div className="flex items-center mb-1">
-          <div className="w-2 h-2 rounded-full bg-orange-500 mr-2"></div>
+        <div className="mb-1 flex items-center">
+          <div className="mr-2 h-2 w-2 rounded-full bg-orange-500"></div>
           <span>Risk (Time)</span>
         </div>
-        <div className="flex items-center mb-1">
-          <div className="w-2 h-2 rounded-full bg-red-500 mr-2"></div>
+        <div className="mb-1 flex items-center">
+          <div className="mr-2 h-2 w-2 rounded-full bg-red-500"></div>
           <span>Out of Zone</span>
         </div>
         <div className="flex items-center">
-          <div className="w-2 h-2 rounded-full border-2 border-blue-500 bg-blue-100 mr-2"></div>
+          <div className="mr-2 h-2 w-2 rounded-full border-2 border-blue-500 bg-blue-100"></div>
           <span>Delivery Zone</span>
         </div>
       </div>
 
-      <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur px-3 py-1 rounded-full border border-gray-200 text-xs text-gray-500 pointer-events-none">
+      <div className="pointer-events-none absolute bottom-4 left-4 rounded-full border border-gray-200 bg-white/80 px-3 py-1 text-xs text-gray-500 backdrop-blur">
         Drag the blue ring to adjust range
       </div>
     </div>
