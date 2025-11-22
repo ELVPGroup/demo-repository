@@ -1,0 +1,31 @@
+{
+  "name": "@elvp/backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon --exec node --loader ts-node/esm app.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@prisma/client": "^7.0.0",
+    "koa": "^3.1.1",
+    "koa-bodyparser": "^4.4.1",
+    "koa-cors": "^0.0.16",
+    "koa-router": "^14.0.0",
+    "prisma": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/koa": "^3.0.1",
+    "@types/koa-bodyparser": "^4.3.13",
+    "@types/koa-router": "^7.4.9",
+    "@types/node": "^24.10.1",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.9.3"
+  }
+}
