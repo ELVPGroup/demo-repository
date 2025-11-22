@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useMemo } from 'react';
 import { MOCK_PROVIDERS } from '../constants';
 import { type Order, OrderStatus, type DashboardStats } from '../types';

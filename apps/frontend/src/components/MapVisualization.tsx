@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Order, OrderStatus } from '../types';
+import { type Order, OrderStatus } from '../types';
 
 interface MapVisualizationProps {
   orders: Order[];
@@ -12,7 +12,7 @@ const MapVisualization: React.FC<MapVisualizationProps> = ({ orders, radius, set
   const [isDragging, setIsDragging] = useState(false);
 
   // Map constants
-  const VIEW_SIZE = 100; // -50 to +50 km coordinate space
+  // const VIEW_SIZE = 100; // -50 to +50 km coordinate space
   const SCALE = 8; // Scale factor for visual rendering
 
   // Convert km coordinates to SVG coordinates (center is 400,400 in an 800x800 svg)

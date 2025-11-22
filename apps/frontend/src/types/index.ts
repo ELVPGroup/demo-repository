@@ -15,6 +15,7 @@ export interface Order {
   distance: number; // Calculated distance from center
   status: OrderStatus;
   estimatedTime: number; // Minutes
+  customerName?: string;
 }
 
 export interface LogisticsProvider {
@@ -52,6 +53,7 @@ export interface PackageData {
   eta: string;
   remaining: string;
   steps: TrackingStep[];
+  currentLocationCoords?: [number, number];
 }
 
 // 在 types.ts 中添加

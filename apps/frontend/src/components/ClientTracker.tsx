@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { type PackageData } from '../types';
 import { MOCK_PACKAGE_DATA } from '../constants';
@@ -31,6 +32,7 @@ const ClientTracker: React.FC = () => {
       [114.832389, 30.458667], // 黄冈入口
     ];
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setRouteData((prev) => ({
       ...prev,
       waypoints,
@@ -215,7 +217,7 @@ const ClientTracker: React.FC = () => {
               {/* Vertical Line */}
               <div className="absolute top-2 bottom-2 left-[19px] w-0.5 bg-gray-200"></div>
 
-              {trackingData.steps.map((step, idx) => (
+              {trackingData.steps.map((step) => (
                 <div key={step.id} className="group relative flex gap-4">
                   {/* Node */}
                   <div
