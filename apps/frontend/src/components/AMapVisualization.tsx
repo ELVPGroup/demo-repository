@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState } from 'react';
 
 type LngLat = [number, number];
@@ -77,7 +79,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   route = null,
   showRoute = false,
   currentLocation,
-  animateRoute = true
+  animateRoute = true,
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const amapRef = useRef<any>(null);
@@ -105,8 +107,9 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       position: path[0],
       icon: new AMap.Icon({
         size: new AMap.Size(20, 20),
-        image: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="%23FF6B35" stroke="%23FFFFFF" stroke-width="2"/></svg>',
-        imageSize: new AMap.Size(20, 20)
+        image:
+          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="%23FF6B35" stroke="%23FFFFFF" stroke-width="2"/></svg>',
+        imageSize: new AMap.Size(20, 20),
       }),
       offset: new AMap.Pixel(-10, -10),
     });
@@ -146,7 +149,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       strokeWeight: 2,
       strokeOpacity: 0.8,
       fillColor: '#FF6B35',
-      fillOpacity: 0.3
+      fillOpacity: 0.3,
     });
 
     map.add(pulseCircle);
@@ -177,7 +180,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       fillColor: 'rgba(59, 130, 246, 0.1)',
       fillOpacity: 0.4,
       strokeStyle: 'solid',
-      strokeDasharray: [5, 5] // 虚线样式
+      strokeDasharray: [5, 5], // 虚线样式
     });
 
     circle.setMap(map);
@@ -188,10 +191,11 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       position: center,
       icon: new AMap.Icon({
         size: new AMap.Size(25, 25),
-        image: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25"><circle cx="12.5" cy="12.5" r="10" fill="%233b82f6" stroke="%23FFFFFF" stroke-width="2"/></svg>',
-        imageSize: new AMap.Size(25, 25)
+        image:
+          'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25"><circle cx="12.5" cy="12.5" r="10" fill="%233b82f6" stroke="%23FFFFFF" stroke-width="2"/></svg>',
+        imageSize: new AMap.Size(25, 25),
       }),
-      title: '配送中心'
+      title: '配送中心',
     });
     centerMarker.setMap(map);
 
@@ -199,14 +203,18 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   };
 
   // 绘制地址标记
-  const drawMarkers = (AMap: any, map: any, markers: Array<{ id: string; position: LngLat; color?: string }>) => {
+  const drawMarkers = (
+    AMap: any,
+    map: any,
+    markers: Array<{ id: string; position: LngLat; color?: string }>
+  ) => {
     // 清除现有标记
-    mapMarkersRef.current.forEach(marker => {
+    mapMarkersRef.current.forEach((marker) => {
       map.remove(marker);
     });
     mapMarkersRef.current = [];
 
-    markers.forEach(marker => {
+    markers.forEach((marker) => {
       const markerColor = marker.color || '#3366FF';
       const markerObj = new AMap.Marker({
         position: marker.position,
@@ -214,8 +222,8 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
         icon: new AMap.Icon({
           size: new AMap.Size(12, 12),
           image: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5" fill="${markerColor}" stroke="white" stroke-width="1"/></svg>`,
-          imageSize: new AMap.Size(12, 12)
-        })
+          imageSize: new AMap.Size(12, 12),
+        }),
       });
 
       // 添加点击事件
@@ -230,7 +238,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
               </div>
             </div>
           `,
-          offset: new AMap.Pixel(0, -10)
+          offset: new AMap.Pixel(0, -10),
         });
         infoWindow.open(map, marker.position);
       });
@@ -254,14 +262,16 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       // 添加起点和终点标记
       const startMarker = new AMap.Marker({
         position: from,
-        content: '<div style="background:#4CAF50;color:white;padding:4px 8px;border-radius:12px;font-size:12px;">武汉</div>',
-        offset: new AMap.Pixel(-25, -10)
+        content:
+          '<div style="background:#4CAF50;color:white;padding:4px 8px;border-radius:12px;font-size:12px;">武汉</div>',
+        offset: new AMap.Pixel(-25, -10),
       });
 
       const endMarker = new AMap.Marker({
         position: to,
-        content: '<div style="background:#FF5722;color:white;padding:4px 8px;border-radius:12px;font-size:12px;">黄冈</div>',
-        offset: new AMap.Pixel(-25, -10)
+        content:
+          '<div style="background:#FF5722;color:white;padding:4px 8px;border-radius:12px;font-size:12px;">黄冈</div>',
+        offset: new AMap.Pixel(-25, -10),
       });
 
       map.add([startMarker, endMarker]);
@@ -271,7 +281,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
         const driving = new AMap.Driving({
           policy: AMap.DrivingPolicy.LEAST_TIME,
           hideMarkers: true,
-          showTraffic: false
+          showTraffic: false,
         });
 
         driving.search(from, to, (status: string, result: any) => {
@@ -321,7 +331,6 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
           }
         });
       });
-
     } catch (error) {
       console.error('路线绘制错误:', error);
       // 出错时使用最简单的直线
@@ -347,9 +356,9 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       icon: new AMap.Icon({
         size: new AMap.Size(30, 30),
         image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
-        imageSize: new AMap.Size(30, 30)
+        imageSize: new AMap.Size(30, 30),
       }),
-      title: '当前位置'
+      title: '当前位置',
     });
 
     map.add(currentLocationMarker);
@@ -359,55 +368,55 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   useEffect(() => {
     let mounted = true;
 
-    loadAMap().then((AMap) => {
-      if (!mounted || !ref.current) return;
+    loadAMap()
+      .then((AMap) => {
+        if (!mounted || !ref.current) return;
 
-      const map = new AMap.Map(ref.current, {
-        center: showRoute && route ? route.from : center,
-        zoom: 11,
-        viewMode: '2D',
+        const map = new AMap.Map(ref.current, {
+          center: showRoute && route ? route.from : center,
+          zoom: 11,
+          viewMode: '2D',
+        });
+
+        amapRef.current = map;
+        setMapLoaded(true);
+
+        map.on('complete', () => {
+          try {
+            // 绘制配送范围圆圈
+            if (showCircle) {
+              drawDeliveryCircle(AMap, map, center, radius);
+            }
+
+            // 绘制地址标记
+            if (markers.length > 0) {
+              drawMarkers(AMap, map, markers);
+            }
+
+            // 绘制当前位置
+            if (currentLocation) {
+              drawCurrentLocation(AMap, map, currentLocation);
+            }
+
+            // 绘制路线
+            if (showRoute && route) {
+              drawRoute(AMap, map, route.from, route.to);
+            }
+
+            // 调整视图以显示所有内容
+            if (markers.length > 0 || showRoute) {
+              setTimeout(() => {
+                map.setFitView();
+              }, 500);
+            }
+          } catch (error) {
+            console.error('地图初始化错误:', error);
+          }
+        });
+      })
+      .catch((err) => {
+        console.error('加载高德地图失败:', err);
       });
-
-      amapRef.current = map;
-      setMapLoaded(true);
-
-      map.on('complete', () => {
-        try {
-          // 绘制配送范围圆圈
-          if (showCircle) {
-            drawDeliveryCircle(AMap, map, center, radius);
-          }
-
-          // 绘制地址标记
-          if (markers.length > 0) {
-            drawMarkers(AMap, map, markers);
-          }
-
-          // 绘制当前位置
-          if (currentLocation) {
-            drawCurrentLocation(AMap, map, currentLocation);
-          }
-
-          // 绘制路线
-          if (showRoute && route) {
-            drawRoute(AMap, map, route.from, route.to);
-          }
-
-          // 调整视图以显示所有内容
-          if (markers.length > 0 || showRoute) {
-            setTimeout(() => {
-              map.setFitView();
-            }, 500);
-          }
-
-        } catch (error) {
-          console.error('地图初始化错误:', error);
-        }
-      });
-
-    }).catch(err => {
-      console.error('加载高德地图失败:', err);
-    });
 
     return () => {
       mounted = false;
@@ -465,39 +474,39 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       <div ref={ref} style={{ width: '100%', height: '100%' }} />
 
       {/* 地图图例 */}
-      <div className="absolute top-4 left-4 bg-white p-3 rounded-lg shadow-md border border-gray-200">
-        <div className="text-sm font-semibold text-gray-700 mb-2">图例</div>
+      <div className="absolute top-4 left-4 rounded-lg border border-gray-200 bg-white p-3 shadow-md">
+        <div className="mb-2 text-sm font-semibold text-gray-700">图例</div>
         <div className="space-y-2 text-xs">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500 border border-white"></div>
+            <div className="h-3 w-3 rounded-full border border-white bg-blue-500"></div>
             <span className="text-gray-600">配送中心</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 border border-white"></div>
+            <div className="h-2 w-2 rounded-full border border-white bg-green-500"></div>
             <span className="text-gray-600">可配送地址</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-orange-500 border border-white"></div>
+            <div className="h-2 w-2 rounded-full border border-white bg-orange-500"></div>
             <span className="text-gray-600">时效风险地址</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-red-500 border border-white"></div>
+            <div className="h-2 w-2 rounded-full border border-white bg-red-500"></div>
             <span className="text-gray-600">范围外地址</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-blue-500 rounded"></div>
+            <div className="h-1 w-4 rounded bg-blue-500"></div>
             <span className="text-gray-600">配送范围 ({radius}km)</span>
           </div>
         </div>
       </div>
 
       {/* 半径信息 */}
-      <div className="absolute bottom-4 left-4 bg-white p-3 rounded-lg shadow-md border border-gray-200">
+      <div className="absolute bottom-4 left-4 rounded-lg border border-gray-200 bg-white p-3 shadow-md">
         <div className="text-sm font-semibold text-blue-600">
           当前配送半径: <span className="text-lg">{radius} km</span>
         </div>
-        <div className="text-xs text-gray-500 mt-1">
-          覆盖 {markers.filter(m => m.color === 'green').length} / {markers.length} 个地址
+        <div className="mt-1 text-xs text-gray-500">
+          覆盖 {markers.filter((m) => m.color === 'green').length} / {markers.length} 个地址
         </div>
       </div>
     </div>

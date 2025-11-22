@@ -1,4 +1,3 @@
-
 export interface Coordinate {
   x: number; // km from center
   y: number; // km from center
@@ -6,8 +5,8 @@ export interface Coordinate {
 
 export enum OrderStatus {
   DELIVERABLE = 'DELIVERABLE', // Within range and time
-  TIME_RISK = 'TIME_RISK',     // Within range but slow
-  OUT_OF_RANGE = 'OUT_OF_RANGE' // Outside radius
+  TIME_RISK = 'TIME_RISK', // Within range but slow
+  OUT_OF_RANGE = 'OUT_OF_RANGE', // Outside radius
 }
 
 export interface Order {
@@ -16,6 +15,7 @@ export interface Order {
   distance: number; // Calculated distance from center
   status: OrderStatus;
   estimatedTime: number; // Minutes
+  customerName?: string;
 }
 
 export interface LogisticsProvider {
@@ -53,6 +53,7 @@ export interface PackageData {
   eta: string;
   remaining: string;
   steps: TrackingStep[];
+  currentLocationCoords?: [number, number];
 }
 
 // 在 types.ts 中添加
