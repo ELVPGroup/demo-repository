@@ -11,14 +11,30 @@
 ### 前端
 
 - 安装依赖：在根目录执行 `pnpm install`
-- 启动开发服务器：`pnpm --filter @elvp/frontend dev`（或 `cd apps/frontend && pnpm dev`）
-- 构建产物：`pnpm --filter @elvp/frontend build`（或 `cd apps/frontend && pnpm build`）
-- 本地预览：`pnpm --filter @elvp/frontend preview`（或 `cd apps/frontend && pnpm preview`）
+- 启动开发服务器：`pnpm dev:web`（或 `cd apps/frontend && pnpm dev`）
+- 构建产物：`pnpm build:web`（或 `cd apps/frontend && pnpm build`）
+- 本地预览：`pnpm preview:web`（或 `cd apps/frontend && pnpm preview`）
+
+#### 路由说明
+
+项目使用 React Router v7 声明式路由进行路由管理，路由配置在 `apps/frontend/src/main.tsx` 中，目前已配置：
+
+- `/`：首页，目前用于地图可视化的demo展示
+- `/merchant`：商家端路由，默认展示仪表板页面
+  - `/merchant/orders/:orderId`：订单详情页面，展示`orderId`订单的详细信息
+  - `/merchant/delivery-management`：配送管理页面
+- `/customer`：客户端路由，默认展示订单列表页面
+  - `/customer/orders/:orderId`：订单详情页面，展示`orderId`订单的详细信息
+
+**React Router 操作相关文档**：
+- 路由配置：https://reactrouter.com/start/declarative/routing
+- 路由跳转：https://reactrouter.com/start/declarative/navigating
+- 参数使用：https://reactrouter.com/start/declarative/url-values
 
 ### 后端
 
 - 安装依赖：在根目录执行 `pnpm install`
-- 启动开发服务器：`pnpm --filter @elvp/backend dev`（或 `cd apps/backend && npm run dev`）
+- 启动开发服务器：`pnpm dev:server`（或 `cd apps/backend && npm run dev`）
 
 ### Linter
 

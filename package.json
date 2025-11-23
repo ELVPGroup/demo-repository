@@ -4,6 +4,10 @@
   "description": "E-commerce Logistics Visualization Platform - monorepo",
   "type": "module",
   "scripts": {
+    "dev:web": "pnpm --filter @elvp/frontend dev",
+    "dev:server": "pnpm --filter @elvp/backend dev",
+    "build:web": "pnpm --filter @elvp/frontend build",
+    "preview:web": "pnpm --filter @elvp/frontend preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
