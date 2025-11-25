@@ -1,43 +1,73 @@
+import { Card, Segmented, type SegmentedProps, Form, Input, Checkbox, Button, Select } from 'antd';
 import { useState } from 'react';
-import MerchantDashboard from './components/MerchantDashboard';
-import ClientTracker from './components/ClientTracker';
-import { LayoutDashboard, PackageSearch } from 'lucide-react';
+import { useNavigate } from 'react-router';
+
+const options: SegmentedProps['options'] = [
+  {
+    label: '登录',
+    value: 'login',
+  },
+  {
+    label: '注册',
+    value: 'register',
+  },
+];
+
+type FieldType = {
+  phone?: string;
+  password?: string;
+  remember?: string;
+};
 
 function App() {
-  // Simple state to toggle views
-  const [view, setView] = useState<'merchant' | 'client'>('client');
+  const [value, setValue] = useState<SegmentedProps['value']>('login');
+  const [role, setRole] = useState<string>('merchant');
+  const navigate = useNavigate();
 
   return (
-    <div className="relative h-screen w-full overflow-hidden font-sans text-gray-900">
-      {/* App View */}
-      {view === 'merchant' ? <MerchantDashboard /> : <ClientTracker />}
+    <>
+      <Select
+        defaultValue={role}
+        style={{ width: 120 }}
+        onChange={setRole}
+        className="absolute top-4 left-4"
+        options={[
+          { value: 'merchant', label: '商家端' },
+          { value: 'client', label: '用户端' },
+        ]}
+      />
+      <main className="flex h-screen flex-col items-center justify-center">
+        <h1 className="mb-4 text-2xl font-bold">电商物流配送可视化平台</h1>
 
-      {/* Floating Navigation Switcher (Bottom Center) */}
-      <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 gap-1 rounded-full border border-gray-200 bg-white/90 p-1.5 shadow-xl backdrop-blur">
-        <button
-          onClick={() => setView('merchant')}
-          className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all ${
-            view === 'merchant'
-              ? 'bg-gray-900 text-white shadow-md'
-              : 'text-gray-500 hover:bg-gray-100'
-          }`}
-        >
-          <LayoutDashboard size={16} />
-          <span>Merchant</span>
-        </button>
-        <button
-          onClick={() => setView('client')}
-          className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all ${
-            view === 'client'
-              ? 'bg-blue-600 text-white shadow-md'
-              : 'text-gray-500 hover:bg-gray-100'
-          }`}
-        >
-          <PackageSearch size={16} />
-          <span>Client Tracker</span>
-        </button>
-      </div>
-    </div>
+        <Card style={{ width: 500 }}>
+          <Segmented options={options} block value={value} onChange={setValue} />
+          {value === 'login' ? (
+            <section className="mt-4">
+              <Form name="login" layout="vertical">
+                <Form.Item<FieldType> label="手机号" name="phone">
+                  <Input />
+                </Form.Item>
+                <Form.Item<FieldType> label="密码" name="password">
+                  <Input.Password />
+                </Form.Item>
+                <Form.Item<FieldType> name="remember" valuePropName="checked" label={null}>
+                  <Checkbox>7天内保持登录</Checkbox>
+                </Form.Item>
+                <Form.Item label={null}>
+                  <Button type="primary" htmlType="submit" onClick={() => navigate(`/${role}`)}>
+                    登录
+                  </Button>
+                </Form.Item>
+              </Form>
+            </section>
+          ) : (
+            <div>
+              <p>TODO：注册表单</p>
+            </div>
+          )}
+        </Card>
+      </main>
+    </>
   );
 }
 
