@@ -15,20 +15,42 @@ datasource db {
 
 model User {
   // SERIAL - 🔑 PK, not null, unique, autoincrement
-  userId   Int    @id @default(autoincrement()) @map("userId")
-  name     String @db.VarChar(255)
-  phone    String @unique @db.VarChar(20)
-  password String @db.VarChar(255)
+  userId    Int           @id @default(autoincrement()) @map("userId")
+  name      String        @db.VarChar(255)
+  phone     String        @unique @db.VarChar(20)
+  password  String        @db.VarChar(255)
+  addresses AddressInfo[]
 
   @@map("users")
 }
 
 model Merchant {
   // SERIAL - 🔑 PK, not null, unique, autoincrement
-  merchantId Int    @id @default(autoincrement()) @map("merchantId")
-  name       String @db.VarChar(255)
-  phone      String @unique @db.VarChar(20)
-  password   String @db.VarChar(255)
+  merchantId Int           @id @default(autoincrement()) @map("merchantId")
+  name       String        @db.VarChar(255)
+  phone      String        @unique @db.VarChar(20)
+  password   String        @db.VarChar(255)
+  addresses  AddressInfo[]
 
   @@map("merchants")
+}
+
+model AddressInfo {
+  // INTEGER - 🔑 PK, not null, unique, autoincrement
+  addressInfoId Int    @id @default(autoincrement()) @map("addressInfoId")
+  name          String @db.VarChar(255)
+  phone         String @db.VarChar(255)
+  address       String @db.VarChar(255)
+  // location (longitude, latitude)
+  longitude     Float  @db.DoublePrecision
+  latitude      Float  @db.DoublePrecision
+
+  // Foreign Keys (SERIAL/INTEGER)
+  userId Int?  @map("userId")
+  user   User? @relation(fields: [userId], references: [userId])
+
+  merchantId Int?      @map("merchantId")
+  merchant   Merchant? @relation(fields: [merchantId], references: [merchantId])
+
+  @@map("addressInfo")
 }

@@ -29,12 +29,27 @@ ALTER USER evlp_admin CREATEDB; -- 允许用户创建新数据库，为prisma cl
 
 6. 复制`.env.example`到`.env`
 ```bash
+# 在项目根目录下
 cp apps/backend/.env.example apps/backend/.env
 ```
 
 7. 利用Prisma ORM初始化数据库（根据schema创建数据库表）
 ```bash
+# 在项目根目录下
 cd apps/backend
-npx prisma migrate dev
+npx prisma migrate dev --name init
+```
+
+8. 初始化Prisma Client
+```bash
+# 在apps/backend目录下
+npx prisma generate
+```
+
+每次修改schema.prisma后，都需要执行以下命令
+```bash
+# 在apps/backend目录下
+npx prisma migrate dev --name update
+npx prisma generate
 ```
 
