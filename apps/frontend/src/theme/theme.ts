@@ -98,5 +98,35 @@ export const themeTokens: ThemeConfig = {
     Layout: {
       siderBg: "#F3F4F6",
     },
+
+    Tag: {
+      borderRadius: 9999, // 完全圆角，用于 pill 形状
+      fontSize: 12,
+      lineHeight: 1.5,
+    },
   }
+};
+
+// ===== 订单状态颜色配置 =====
+export const orderStatusColors = {
+  pending: {
+    bg: "#FEE2E2", // 浅红色背景
+    text: "#991B1B", // 深红色文字
+    border: "#FCA5A5", // 红色边框（可选）
+  },
+  confirmed: {
+    bg: "#DBEAFE", // 浅蓝色背景
+    text: "#1E40AF", // 深蓝色文字
+    border: "#93C5FD", // 蓝色边框（可选）
+  },
+  delivered: {
+    bg: "#D1FAE5", // 浅绿色背景
+    text: "#065F46", // 深绿色文字
+    border: "#6EE7B7", // 绿色边框（可选）
+  },
+  default: {
+    bg: "#F3F4F6", // 浅灰色背景
+    text: "#374151", // 深灰色文字
+    border: "#D1D5DB", // 灰色边框（可选）
+  },
 };

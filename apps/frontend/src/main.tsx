@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route } from 'react-router';
 import './index.css';
 import App from './App.tsx';
 // 商家端
-import MerchantLayout from '@/layouts/MerchantLayout.tsx';
 import DashboardPage from '@/pages/merchant/DashboardPage.tsx';
 import DeliveryManagementPage from '@/pages/merchant/DeliveryManagementPage.tsx';
 import MerchantOrderDetailPage from '@/pages/merchant/OrderDetailPage.tsx';
@@ -26,12 +25,10 @@ createRoot(document.getElementById('root')!).render(
           {/* 项目根目录，目前为示例页面 */}
           <Route index element={<App />} />
           {/* 商家端路由 */}
-          <Route path="merchant" element={<MerchantLayout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="orders/list" element={<OrdersPage />} />
-            <Route path="orders/:orderId" element={<MerchantOrderDetailPage />} />
-            <Route path="delivery-management" element={<DeliveryManagementPage />} />
-          </Route>
+          <Route path="merchant" element={<DashboardPage />} />
+          <Route path="merchant/orders/list" element={<OrdersPage />} />
+          <Route path="merchant/orders/:orderId" element={<MerchantOrderDetailPage />} />
+          <Route path="merchant/delivery-management" element={<DeliveryManagementPage />} />
           {/* 用户端路由 */}
           <Route path="client" element={<ClientLayout />}>
             <Route index element={<MyOrdersPage />} />

@@ -4,6 +4,7 @@ import Sidebar from '@/components/merchantComponents/Sidebar';
 import { ArrowLeft, Package, MapPin, Truck, Hash } from 'lucide-react';
 import { TimeLine } from '@/components/merchantComponents/TimeLine';
 import { MOCK_PACKAGE_DATA } from '@/constants';
+import { Button } from 'antd';
 
 const OrderDetailPage = () => {
   const { orderId } = useParams();
@@ -15,13 +16,13 @@ const OrderDetailPage = () => {
       <main className="ml-60 px-10 py-6">
         <div className='flex flex-row gap-4 justify-between'>
           <TopBar title={`订单详情 - ${orderId}`} />
-          <button
+          <Button
             onClick={() => navigate('/merchant/orders')}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 text-sm transition-colors hover:bg-gray-50"
+            color='primary'
           >
             <ArrowLeft size={18} />
             <span>返回订单列表</span>
-          </button>
+          </Button>
         </div>
 
 

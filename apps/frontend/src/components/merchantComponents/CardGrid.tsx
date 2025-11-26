@@ -1,16 +1,14 @@
 import React from "react";
 import { OrderCard } from "./OrderCard";
-import type { OrderItem } from "@/pages/merchant/OrdersPage";
+import { useOrderStore } from "@/store/useOrderStore";
 
-interface CardGridProps {
-  orders: OrderItem[];
-}
+const CardGrid: React.FC = () => {
+  const { orders } = useOrderStore();
 
-const CardGrid: React.FC<CardGridProps> = ({ orders }) => {
   return (
-    <div className="grid grid-cols-3 gap-6 p-4">
+    <div className="grid grid-cols-3 gap-6 p-2">
       {orders.map((item) => (
-        <OrderCard key={item.id} order={item} />
+        <OrderCard key={item.orderId} order={item} />
       ))}
     </div>
   );
