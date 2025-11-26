@@ -12,11 +12,21 @@ const ITEMS_PER_PAGE = 9;
 const OrdersPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'all' | 'pending' | 'done'>('all');
-  const [sortBy, setSortBy] = useState<'createdAt' | 'totalPrice' | 'orderId'>('createdAt');
+  const [sortBy, setSortBy] = useState<'time' | 'amount' | 'id'>('time');
   const [sort, setSort] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
 
   const { orders, total, loading, setParams, fetchOrders } = useOrderStore();
+
+  // 将 StatusFilter 的 sortBy 值映射到 API 期望的值
+  const mapSortByToApi = (value: 'time' | 'amount' | 'id'): 'createdAt' | 'totalPrice' | 'orderId' => {
+    const mapping = {
+      time: 'createdAt',
+      amount: 'totalPrice',
+      id: 'orderId',
+    } as const;
+    return mapping[value];
+  };
 
   // 当过滤条件或页码改变时，更新 store 参数并重新获取数据
   useEffect(() => {
@@ -26,7 +36,7 @@ const OrdersPage: React.FC = () => {
       limit: ITEMS_PER_PAGE,
       offset: (currentPage - 1) * ITEMS_PER_PAGE,
       sort,
-      sortBy,
+      sortBy: mapSortByToApi(sortBy),
     });
     fetchOrders();
   }, [search, status, sortBy, sort, currentPage, setParams, fetchOrders]);
