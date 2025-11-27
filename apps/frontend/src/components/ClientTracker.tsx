@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { type PackageData } from '../types';
 import { MOCK_PACKAGE_DATA } from '../constants';

@@ -1,9 +1,8 @@
-import { create } from "zustand";
-import { merchantAxiosInstance } from "../utils/axios";
-
+import { create } from 'zustand';
+import { merchantAxiosInstance } from '../utils/axios';
 
 // 引入接口类型
-import type { OrderDetailResponse, OrderDetail } from "../types/orderDetailInterface";
+import type { OrderDetailResponse, OrderDetail } from '../types/orderDetailInterface';
 
 interface OrderDetailStore {
   order: OrderDetail | null;
@@ -33,11 +32,11 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
         order: res.data.data,
         loading: false,
       });
-
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : '获取订单失败';
       set({
         loading: false,
-        error: err.message || "获取订单失败",
+        error: errorMessage,
       });
     }
   },
@@ -47,15 +46,18 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
     set({ order });
 
     try {
-      const res = await merchantAxiosInstance.put<OrderDetailResponse>(`/orders/${order.orderId}`, order);
+      const res = await merchantAxiosInstance.put<OrderDetailResponse>(
+        `/orders/${order.orderId}`,
+        order
+      );
       set({
         loading: false,
       });
-
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : '更新订单失败';
       set({
         loading: false,
-        error: err.message || "更新订单失败",
+        error: errorMessage,
       });
     }
   },
