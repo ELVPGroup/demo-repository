@@ -18,13 +18,10 @@ export default defineConfig([
     plugins: { js },
     extends: ['js/recommended'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
-    rules: {
-      '@typescript-eslint/no-unused-vars': 'warn',
-    },
   },
   tseslint.configs.recommended,
   {
-    files: ['**/*.{tsx,jsx}'],
+    files: ['apps/frontend/**/*.{tsx,jsx,ts,js}'],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
@@ -35,6 +32,8 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+  },
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': 'warn',
     },
