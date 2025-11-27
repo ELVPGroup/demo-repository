@@ -13,6 +13,22 @@ datasource db {
   provider = "postgresql"
 }
 
+enum OrderStatus {
+  PENDING // 待发货
+  SHIPPED // 运输中
+  COMPLETED // 已完成
+  CANCELED // 已取消
+}
+
+enum ShippingStatus {
+  PENDING // 待发货
+  PACKING // 已揽收
+  SHIPPED // 运输中
+  IN_TRANSIT // 派送中
+  DELIVERED // 已签收
+  CANCELED // 已取消
+}
+
 model User {
   // SERIAL - 🔑 PK, not null, unique, autoincrement
   userId    Int           @id @default(autoincrement()) @map("userId")
@@ -20,17 +36,21 @@ model User {
   phone     String        @unique @db.VarChar(20)
   password  String        @db.VarChar(255)
   addresses AddressInfo[]
+  orders    Order[]
 
   @@map("users")
 }
 
 model Merchant {
   // SERIAL - 🔑 PK, not null, unique, autoincrement
-  merchantId Int           @id @default(autoincrement()) @map("merchantId")
-  name       String        @db.VarChar(255)
-  phone      String        @unique @db.VarChar(20)
-  password   String        @db.VarChar(255)
-  addresses  AddressInfo[]
+  merchantId   Int           @id @default(autoincrement()) @map("merchantId")
+  name         String        @db.VarChar(255)
+  phone        String        @unique @db.VarChar(20)
+  password     String        @db.VarChar(255)
+  addresses    AddressInfo[]
+  orders       Order[]
+  // 一个商家对应一个配送范围
+  deliveryArea DeliveryArea?
 
   @@map("merchants")
 }
@@ -39,18 +59,124 @@ model AddressInfo {
   // INTEGER - 🔑 PK, not null, unique, autoincrement
   addressInfoId Int    @id @default(autoincrement()) @map("addressInfoId")
   name          String @db.VarChar(255)
-  phone         String @db.VarChar(255)
+  phone         String @db.VarChar(20)
   address       String @db.VarChar(255)
   // location (longitude, latitude)
   longitude     Float  @db.DoublePrecision
   latitude      Float  @db.DoublePrecision
 
-  // Foreign Keys (SERIAL/INTEGER)
-  userId Int?  @map("userId")
-  user   User? @relation(fields: [userId], references: [userId])
-
+  // Foreign Keys
+  userId     Int?      @map("userId")
+  user       User?     @relation(fields: [userId], references: [userId])
   merchantId Int?      @map("merchantId")
   merchant   Merchant? @relation(fields: [merchantId], references: [merchantId])
 
+  // 一个地址可作为多个订单的发货地址
+  shippingFromOrders OrderDetail[] @relation("ShippingFromAddress") // 发货地址
+  // 一个地址可作为多个订单的收货地址
+  shippingToOrders   OrderDetail[] @relation("ShippingToAddress") // 收货地址
+
   @@map("addressInfo")
+}
+
+model Product {
+  // INTEGER - 🔑 PK, not null, unique, autoincrement
+  productId   Int     @id @default(autoincrement()) @map("productId")
+  name        String  @db.VarChar(255)
+  description String? @db.Text
+  price       Decimal @db.Decimal(10, 2)
+  amount      Int
+
+  // 一个商品可被多个订单项引用
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Order {
+  // INTEGER - 🔑 PK, not null, unique, autoincrement
+  orderId   Int         @id @default(autoincrement()) @map("orderId")
+  status    OrderStatus @default(PENDING)
+  // TIMESTAMPTZ
+  createdAt DateTime    @default(now()) @db.Timestamptz(6)
+
+  // Foreign Keys
+  userId     Int?         @map("userId")
+  user       User?        @relation(fields: [userId], references: [userId])
+  merchantId Int?         @map("merchantId")
+  merchant   Merchant?    @relation(fields: [merchantId], references: [merchantId])
+  // 一个订单包含多个订单项
+  orderItems OrderItem[]
+  // 一个订单对应一个订单详情
+  detail     OrderDetail?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  // INTEGER - 🔑 PK, not null, unique, autoincrement
+  orderItemId Int @id @default(autoincrement()) @map("orderItemId")
+  quantity    Int @map("quantity")
+
+  // Foreign Keys
+  orderId   Int     @map("orderId")
+  order     Order   @relation(fields: [orderId], references: [orderId])
+  productId Int     @map("productId")
+  product   Product @relation(fields: [productId], references: [productId])
+
+  @@unique([orderId, productId]) // 一个订单项只能对应一个商品
+  @@map("orderItems")
+}
+
+model OrderDetail {
+  // INTEGER - 🔑 PK, not null, unique, autoincrement (作为主键/外键)
+  // 订单详情与订单一一对应
+  orderId Int   @id @map("orderId")
+  order   Order @relation(fields: [orderId], references: [orderId])
+
+  // Foreign Keys
+  // 多个订单详情可指向同一发货地址
+  addressFromId Int         @map("addressFromId")
+  addressFrom   AddressInfo @relation("ShippingFromAddress", fields: [addressFromId], references: [addressInfoId])
+
+  // 多个订单详情可指向同一收货地址
+  addressToId Int         @map("addressToId")
+  addressTo   AddressInfo @relation("ShippingToAddress", fields: [addressToId], references: [addressInfoId])
+
+  // 一个订单详情有多个时间线条目
+  timelineItems TimelineItem[]
+
+  @@map("orderDetail")
+}
+
+model TimelineItem {
+  // INTEGER - 🔑 PK, not null, unique, autoincrement
+  id Int @id @default(autoincrement())
+
+  // Foreign Key
+  // 多个时间线条目属于一个订单详情
+  orderId     Int         @map("orderId")
+  orderDetail OrderDetail @relation(fields: [orderId], references: [orderId])
+
+  shippingStatus ShippingStatus @default(PENDING)
+  time           DateTime       @default(now()) @db.Timestamptz(6)
+  description    String?        @map("description") @db.Text
+
+  @@map("timelineItems")
+}
+
+model DeliveryArea {
+  // center point (longitude, latitude)
+  longitude Float   @db.DoublePrecision
+  latitude  Float   @db.DoublePrecision
+  radius    Decimal @db.Decimal
+
+  // Foreign Key
+  // 通过唯一 merchantId 关联一个商家
+  merchantId Int      @map("merchantId")
+  merchant   Merchant @relation(fields: [merchantId], references: [merchantId])
+
+  // INTEGER - 🔑 PK, not null, unique, autoincrement
+  @@id([merchantId])
+  @@map("deliveryArea")
 }
