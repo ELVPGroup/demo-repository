@@ -39,13 +39,13 @@ const Sidebar: React.FC = () => {
     {
       key: 'dashboard',
       icon: <Home size={20} />,
-      label: 'Dashboard',
+      label: '数据分析',
       onClick: () => navigate(`${base}`),
     },
     {
       key: 'orders',
       icon: <ClipboardList size={20} />,
-      label: 'Orders',
+      label: '订单管理',
       onClick: () => navigate(`${base}/orders/list`),
     },
     {

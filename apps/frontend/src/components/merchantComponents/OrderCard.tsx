@@ -1,34 +1,21 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
-import type { OrderItem } from '@/pages/merchant/OrdersPage';
+import type { OrderItem } from '@/types/order';
+import { orderStatusColors } from '@/theme/theme';
+import { Button } from 'antd';
 
 interface OrderCardProps {
   order: OrderItem;
 }
 
 const getStatusConfig = (status: OrderItem['status']) => {
-  switch (status) {
-    case 'pending':
-      return {
-        text: '待处理',
-        className: 'bg-rose-400 text-rose-900',
-      };
-    case 'confirmed':
-      return {
-        text: '已确认',
-        className: 'bg-blue-400 text-blue-900',
-      };
-    case 'delivered':
-      return {
-        text: '已送达',
-        className: 'bg-green-400 text-green-900',
-      };
-    default:
-      return {
-        text: '未知',
-        className: 'bg-gray-400 text-gray-900',
-      };
-  }
+  const statusMap = {
+    pending: { text: '待处理', colors: orderStatusColors.pending },
+    confirmed: { text: '已确认', colors: orderStatusColors.confirmed },
+    delivered: { text: '已送达', colors: orderStatusColors.delivered },
+  };
+
+  return statusMap[status] || { text: '未知', colors: orderStatusColors.default };
 };
 
 export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
@@ -36,37 +23,35 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
   const statusConfig = getStatusConfig(order.status);
 
   const handleDetailClick = () => {
-    navigate(`/merchant/orders/${order.id}`);
+    navigate(`/merchant/orders/${order.orderId}`);
   };
 
   return (
     <div className="flex flex-col justify-between rounded-2xl bg-blue-50 p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">{order.id}</h2>
+        <h2 className="text-lg font-bold">订单编号：{order.orderId}</h2>
         <span
-          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusConfig.className}`}
+          className="rounded-full px-3 py-1 text-xs font-semibold"
+          style={{
+            backgroundColor: statusConfig.colors.bg,
+            color: statusConfig.colors.text,
+          }}
         >
           {statusConfig.text}
         </span>
       </div>
 
-      <p className="mt-2 text-sm text-gray-500">{order.productName}</p>
-      <p className="mt-4 text-sm text-gray-600">下单时间：{order.orderTime}</p>
+      <p className="mt-2 text-sm text-gray-500">用户ID：{order.userId}</p>
+      <p className="mt-4 text-sm text-gray-600">下单时间：{order.createdAt}</p>
 
       <div className="mt-4 flex items-center justify-between">
-        <p className="text-xl font-bold">¥{order.amount}</p>
-        <button
+        <p className="text-xl font-bold">¥{order.totalPrice}</p>
+        <Button
           onClick={handleDetailClick}
-          className="
-            text-primary 
-            text-sm
-            hover:underline 
-            hover:text-primary-hover
-            focus:outline-none
-          "
+          type='link'
         >
           详情
-        </button>
+        </Button>
       </div>
     </div>
   );
