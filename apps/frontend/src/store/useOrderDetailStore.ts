@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { merchantAxiosInstance } from "../utils/axios";
 
+
 // 引入接口类型
 import type { OrderDetailResponse, OrderDetail } from "../types/orderDetailInterface";
 
@@ -11,6 +12,7 @@ interface OrderDetailStore {
 
   // actions
   fetchOrderDetail: (orderId: string) => Promise<void>;
+  updateOrder: (order: OrderDetail) => Promise<void>;
   clearOrder: () => void;
 }
 
@@ -24,12 +26,14 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
     set({ loading: true, error: null });
 
     try {
-      const res = await merchantAxiosInstance.get<OrderDetailResponse>(`/orders/${orderId}`);
+      const res = await merchantAxiosInstance.get<OrderDetailResponse>(`/orders/detail/${orderId}`);
+      console.log(res.data.data);
 
       set({
         order: res.data.data,
         loading: false,
       });
+
     } catch (err: any) {
       set({
         loading: false,
@@ -38,6 +42,24 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
     }
   },
 
-  // 清空订单
+  //更新订单信息
+  updateOrder: async (order: OrderDetail) => {
+    set({ order });
+
+    try {
+      const res = await merchantAxiosInstance.put<OrderDetailResponse>(`/orders/${order.orderId}`, order);
+      set({
+        loading: false,
+      });
+
+    } catch (err: any) {
+      set({
+        loading: false,
+        error: err.message || "更新订单失败",
+      });
+    }
+  },
+
+  // 清空订单信息
   clearOrder: () => set({ order: null }),
 }));

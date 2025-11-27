@@ -36,7 +36,7 @@ const OrdersPage: React.FC = () => {
       limit: ITEMS_PER_PAGE,
       offset: (currentPage - 1) * ITEMS_PER_PAGE,
       sort,
-      sortBy: mapSortByToApi(sortBy),
+      sortBy,
     });
     fetchOrders();
   }, [search, status, sortBy, sort, currentPage, setParams, fetchOrders]);
