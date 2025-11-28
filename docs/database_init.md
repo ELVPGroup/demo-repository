@@ -37,7 +37,7 @@ cp apps/backend/.env.example apps/backend/.env
 ```bash
 # 在项目根目录下
 cd apps/backend
-npx prisma migrate dev --name init
+npx prisma migrate dev
 ```
 
 8. 初始化Prisma Client
