@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import prisma from '../db.js';
+import { userModel } from '@/models/userModel.js';
+import { merchantModel } from '@/models/merchantModel.js';
 import { ServiceKey, generateServiceId } from '../utils/serverIdHandler.js';
 
 const JWT_SECRET = process.env['JWT_SECRET'] || '';
@@ -37,12 +38,8 @@ export class AuthService {
     // 检查用户是否已存在
     const existingRole =
       side === 'client'
-        ? await prisma.user.findUnique({
-            where: { phone },
-          })
-        : await prisma.merchant.findUnique({
-            where: { phone },
-          });
+        ? await userModel.findByPhone(phone)
+        : await merchantModel.findByPhone(phone);
 
     if (existingRole) {
       throw new Error('用户已存在');
@@ -54,20 +51,8 @@ export class AuthService {
     // 创建用户
     const role =
       side === 'client'
-        ? await prisma.user.create({
-            data: {
-              name,
-              phone,
-              password: hashedPassword,
-            },
-          })
-        : await prisma.merchant.create({
-            data: {
-              name,
-              phone,
-              password: hashedPassword,
-            },
-          });
+        ? await userModel.create({ name, phone, password: hashedPassword })
+        : await merchantModel.create({ name, phone, password: hashedPassword });
 
     // 生成 JWT token
     const roleId =
@@ -101,12 +86,8 @@ export class AuthService {
     // 查找用户或商家
     const role =
       side === 'client'
-        ? await prisma.user.findUnique({
-            where: { phone },
-          })
-        : await prisma.merchant.findUnique({
-            where: { phone },
-          });
+        ? await userModel.findByPhone(phone)
+        : await merchantModel.findByPhone(phone);
 
     if (!role) {
       throw new Error('用户不存在');
@@ -173,14 +154,7 @@ export class AuthService {
     const decoded = this.verifyToken(token);
 
     if (decoded.side === 'client') {
-      const user = await prisma.user.findUnique({
-        where: { userId: decoded.id },
-        select: {
-          userId: true,
-          name: true,
-          phone: true,
-        },
-      });
+      const user = await userModel.findById(decoded.id);
 
       if (!user) {
         throw new Error('用户不存在');
@@ -188,14 +162,7 @@ export class AuthService {
 
       return user;
     } else {
-      const merchant = await prisma.merchant.findUnique({
-        where: { merchantId: decoded.id },
-        select: {
-          merchantId: true,
-          name: true,
-          phone: true,
-        },
-      });
+      const merchant = await merchantModel.findById(decoded.id);
 
       if (!merchant) {
         throw new Error('商家不存在');

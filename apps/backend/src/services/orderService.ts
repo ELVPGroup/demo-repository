@@ -4,7 +4,9 @@ import type {
   MerchantOrderListFilterParams,
   ClientOrderListFilterParams,
 } from '../types/order.js';
-import prisma from '../db.js';
+import { orderModel } from '../models/orderModel.js';
+import { userModel } from '../models/userModel.js';
+import { OrderStatus } from 'generated/prisma/enums.js';
 
 export class OrderService {
   /**
@@ -20,7 +22,10 @@ export class OrderService {
       // 商家订单列表
       where['merchantId'] = payload.merchantId;
       if ('customerName' in payload && payload.customerName) {
-        where['customerName'] = { contains: payload.customerName, mode: 'insensitive' };
+        const users = await userModel.findByName(payload.customerName);
+        if (users.length > 0) {
+          where['userId'] = { in: users.map((user) => user.userId) };
+        }
       }
     } else if ('userId' in payload && payload.userId !== undefined) {
       // 客户订单列表
@@ -36,10 +41,9 @@ export class OrderService {
     }
     // 通用的订单状态筛选
     if ('status' in payload && payload.status !== undefined) {
-      where['status'] = payload.status;
+      where['status'] = OrderStatus[payload.status];
     }
-
-    return prisma.order.findMany({
+    return orderModel.findMany({
       where,
       ...(payload.offset !== undefined ? { skip: payload.offset } : {}),
       ...(payload.limit !== undefined ? { take: payload.limit } : {}),
