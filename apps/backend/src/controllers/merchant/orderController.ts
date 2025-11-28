@@ -1,8 +1,8 @@
 import type { Context } from 'koa';
-import { orderService } from '../../services/orderService.js';
-import { extractRoleId } from '../../utils/roleHandler.js';
-import { type SortParams, type PaginationParams } from '../../types/index.js';
-import type { OrderStatus } from '../../../generated/prisma/enums.js';
+import { orderService } from '@/services/orderService.js';
+import { extractRoleId } from '@/utils/roleHandler.js';
+import { type SortParams, type PaginationParams } from '@/types/index.js';
+import type { OrderStatus } from '@/../generated/prisma/enums.js';
 
 type MerchantOrderListParams = {
   merchantId: number;
