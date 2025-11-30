@@ -10,4 +10,10 @@ const router = new Router({ prefix: '/api/merchant/orders' });
  */
 router.post('/list', authMiddleware, (ctx) => merchantOrderController.getOrderList(ctx));
 
+/**
+ * POST /api/merchant/orders
+ * 创建订单（商家端）
+ */
+router.post('/', authMiddleware, (ctx) => merchantOrderController.create(ctx));
+
 export default router;
