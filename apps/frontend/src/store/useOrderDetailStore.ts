@@ -1,9 +1,8 @@
-import { create } from "zustand";
-import { merchantAxiosInstance } from "../utils/axios";
-
+import { create } from 'zustand';
+import { merchantAxiosInstance } from '../utils/axios';
 
 // 引入接口类型
-import type { OrderDetailResponse, OrderDetail } from "../types/orderDetailInterface";
+import type { OrderDetailResponse, OrderDetail } from '../types/orderDetailInterface';
 
 interface OrderDetailStore {
   order: OrderDetail | null;
