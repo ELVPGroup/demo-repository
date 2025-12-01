@@ -98,3 +98,4 @@ export const MOCK_PACKAGE_DATA: PackageData = {
     },
   ],
 };
+

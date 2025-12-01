@@ -13,6 +13,7 @@ interface OrderDetailStore {
   // actions
   fetchOrderDetail: (orderId: string) => Promise<void>;
   updateOrder: (order: OrderDetail) => Promise<void>;
+  shipOrder: (orderId: string) => Promise<void>;
   clearOrder: () => void;
 }
 
@@ -34,28 +35,52 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
         loading: false,
       });
 
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "获取订单失败";
       set({
         loading: false,
-        error: err.message || "获取订单失败",
+        error: errorMessage,
       });
     }
   },
 
   //更新订单信息
   updateOrder: async (order: OrderDetail) => {
-    set({ order });
+    set({ loading: true, error: null, order });
 
     try {
-      const res = await merchantAxiosInstance.put<OrderDetailResponse>(`/orders/${order.orderId}`, order);
+      await merchantAxiosInstance.put<OrderDetailResponse>(`/orders/${order.orderId}`, order);
       set({
         loading: false,
       });
 
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "更新订单失败";
       set({
         loading: false,
-        error: err.message || "更新订单失败",
+        error: errorMessage,
+      });
+    }
+  },
+
+  // 模拟发货
+  shipOrder: async (orderId: string) => {
+    set({ loading: true, error: null });
+
+    try {
+      await merchantAxiosInstance.post(`/orders/${orderId}/ship`);
+      
+      // 发货成功后重新获取订单详情
+      const res = await merchantAxiosInstance.get<OrderDetailResponse>(`/orders/detail/${orderId}`);
+      set({
+        order: res.data.data,
+        loading: false,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "发货失败";
+      set({
+        loading: false,
+        error: errorMessage,
       });
     }
   },

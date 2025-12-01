@@ -56,7 +56,6 @@ const OrdersPage: React.FC = () => {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-layout)' }}>
-      <Sidebar />
 
       <main className="ml-60 flex-1 px-10 py-6">
         <TopBar title="订单管理" />

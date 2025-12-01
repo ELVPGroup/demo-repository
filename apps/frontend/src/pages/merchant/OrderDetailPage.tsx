@@ -4,7 +4,7 @@ import Sidebar from '@/components/merchantComponents/Sidebar';
 import { ArrowLeft, Package, MapPin, Truck, Hash } from 'lucide-react';
 import { TimeLine } from '@/components/merchantComponents/TimeLine';
 import { MOCK_PACKAGE_DATA } from '@/constants';
-import { Alert, Button, Form, Modal, Input, InputNumber, Space, Card } from 'antd';
+import { Alert, Button, Form, Modal, Input, InputNumber, Space, Card, message } from 'antd';
 import { useEffect, useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
 
@@ -16,11 +16,12 @@ const OrderDetailPage = () => {
   const [editVisible, setEditVisible] = useState(false);
   const [form] = Form.useForm();
 
-  const { order, loading, error, fetchOrderDetail, updateOrder } = useOrderDetailStore();
+  const { order, loading, error, fetchOrderDetail, updateOrder, shipOrder } = useOrderDetailStore();
 
   useEffect(() => {
     if (orderId) {
       fetchOrderDetail(orderId);
+      console.log(order?.status);
     }
   }, [orderId, fetchOrderDetail]);
 
@@ -62,10 +63,27 @@ const OrderDetailPage = () => {
 
       await updateOrder(updatedOrder);
       setEditVisible(false);
+      message.success('订单信息更新成功');
     } catch (error) {
       console.error('表单验证失败:', error);
     }
   };
+
+  const handleShipOrder = async () => {
+    if (!orderId) return;
+    
+    try {
+      await shipOrder(orderId);
+      message.success('订单发货成功');
+    } catch (err) {
+      message.error('发货失败，请重试');
+    }
+  };
+
+  // 判断是否可以发货（待处理或已确认状态）
+  const canShip = order && (order.shippingStatus === '待发货');
+  console.log(canShip);
+  
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -220,8 +238,6 @@ const OrderDetailPage = () => {
         />
       )}
 
-
-      <Sidebar />
       <main className="ml-60 px-10 py-6">
         <div className='flex flex-row gap-4 justify-between'>
           <TopBar title={`订单详情 - ${orderId || ''}`} />
@@ -230,7 +246,7 @@ const OrderDetailPage = () => {
 
             {/* 返回订单列表按钮 */}
             <Button
-              onClick={() => navigate('/merchant/orders')}
+              onClick={() => navigate('/merchant/orders/list')}
               color='primary'
             >
               <ArrowLeft size={18} />
@@ -245,6 +261,20 @@ const OrderDetailPage = () => {
             >
               编辑订单
             </Button>
+
+            {/* 模拟发货按钮 */}
+            {canShip && (
+              <Button 
+                type="primary"
+                danger
+                icon={<Truck size={18} />}
+                onClick={handleShipOrder}
+                disabled={loading}
+                loading={loading}
+              >
+                模拟发货
+              </Button>
+            )}
           </div>
 
 
