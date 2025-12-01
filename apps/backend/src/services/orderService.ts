@@ -324,6 +324,40 @@ export class OrderService {
       })),
     };
   }
+
+  async sendShipment(merchantId: number, orderId: number) {
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      throw new Error('订单不存在');
+    }
+    if (order.merchantId !== merchantId) {
+      throw new Error('没有权限操作该订单');
+    }
+    if (order.status === 'SHIPPED') {
+      throw new Error('订单已处于运输中');
+    }
+    if (order.status === 'COMPLETED') {
+      throw new Error('订单已完成，无法发货');
+    }
+    if (order.status === 'CANCELED') {
+      throw new Error('订单已取消，无法发货');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { orderId }, data: { status: 'SHIPPED' } });
+      await tx.timelineItem.create({
+        data: {
+          orderDetail: { connect: { orderId } },
+          shippingStatus: 'SHIPPED',
+          description: '订单发货',
+        },
+      });
+    });
+
+    // TODO：Websocket 更新物流模拟位置
+
+    return this.getOrderDetail(orderId);
+  }
 }
 
 export const orderService = new OrderService();
