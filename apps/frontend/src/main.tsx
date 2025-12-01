@@ -1,17 +1,21 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router';
+import { lazy, Suspense } from 'react';
+import { Spin } from 'antd';
 import './index.css';
 import App from './App.tsx';
 // 商家端
-import DashboardPage from '@/pages/merchant/DashboardPage.tsx';
-import DeliveryManagementPage from '@/pages/merchant/DeliveryManagementPage.tsx';
-import MerchantOrderDetailPage from '@/pages/merchant/OrderDetailPage.tsx';
-import OrdersPage from './pages/merchant/OrdersPage.tsx';
+const DashboardPage = lazy(() => import('@/pages/merchant/DashboardPage.tsx'));
+const DeliveryManagementPage = lazy(() => import('@/pages/merchant/DeliveryManagementPage.tsx'));
+const MerchantOrderDetailPage = lazy(() => import('@/pages/merchant/OrderDetailPage.tsx'));
+const OrdersPage = lazy(() => import('./pages/merchant/OrdersPage.tsx'));
+const ShippingPage = lazy(() => import('./pages/merchant/ShippingPage.tsx'));
+import MerchantLayout from '@/layouts/MerchantLayout.tsx';
 // 用户端
 import ClientLayout from '@/layouts/ClientLayout.tsx';
-import MyOrdersPage from '@/pages/client/MyOrdersPage.tsx';
-import ClientOrderDetailPage from '@/pages/client/OrderDetailPage.tsx';
+const MyOrdersPage = lazy(() => import('@/pages/client/MyOrdersPage.tsx'));
+const ClientOrderDetailPage = lazy(() => import('@/pages/client/OrderDetailPage.tsx'));
 
 //为AntD配置样式
 import { ConfigProvider } from 'antd';
@@ -21,20 +25,26 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConfigProvider theme={themeTokens}>
       <BrowserRouter>
-        <Routes>
-          {/* 项目根目录，目前为示例页面 */}
-          <Route index element={<App />} />
-          {/* 商家端路由 */}
-          <Route path="merchant" element={<DashboardPage />} />
-          <Route path="merchant/orders/list" element={<OrdersPage />} />
-          <Route path="merchant/orders/:orderId" element={<MerchantOrderDetailPage />} />
-          <Route path="merchant/delivery-management" element={<DeliveryManagementPage />} />
-          {/* 用户端路由 */}
-          <Route path="client" element={<ClientLayout />}>
-            <Route index element={<MyOrdersPage />} />
-            <Route path="orders/:orderId" element={<ClientOrderDetailPage />} />
-          </Route>
-        </Routes>
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"> <Spin size="large" /></div>}>
+          <Routes>
+            {/* 项目根目录，目前为示例页面 */}
+            <Route index element={<App />} />
+
+            {/* 商家端路由 */}
+            <Route path="/merchant" element={<MerchantLayout />} >
+              <Route index element={<DashboardPage />} />
+              <Route path="orders/list" element={<OrdersPage />} />
+              <Route path="orders/:orderId" element={<MerchantOrderDetailPage />} />
+              <Route path="delivery-management" element={<DeliveryManagementPage />} />
+              <Route path="shipping" element={<ShippingPage />} />
+            </Route>
+            {/* 用户端路由 */}
+            <Route path="client" element={<ClientLayout />}>
+              <Route index element={<MyOrdersPage />} />
+              <Route path="orders/:orderId" element={<ClientOrderDetailPage />} />
+            </Route>
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </ConfigProvider>
   </StrictMode>
