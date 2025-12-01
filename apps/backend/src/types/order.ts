@@ -1,6 +1,7 @@
 export type OrderStatus = 'PENDING' | 'SHIPPED' | 'COMPLETED' | 'CANCELED';
-import type { ShippingStatus } from 'generated/prisma/enums.js';
-import type { PaginationParams, SortParams } from './index.js';
+import type { Optional, PaginationParams, SortParams } from './index.js';
+import type { Product } from './product.js';
+import type { Address } from './address.js';
 
 export type MerchantOrderListParams = {
   merchantId: number;
@@ -48,51 +49,33 @@ export type CreateOrderBody = {
   amount: number;
   totalPrice: number;
   shippingFromId: string;
-  shippingTo: {
-    name: string;
-    phone: string;
-    address: string;
-    location?: [number, number];
+  shippingTo: Omit<Address, 'addressInfoId' | 'position'> & {
+    addressInfoId: string; // 接收地址服务ID（string）
   };
-  products: Array<{
-    productId: string;
-    name: string;
-    description: string;
-    price: number;
-    amount: number; // 作为下单数量
-  }>;
+  products: Array<
+    Product & {
+      productId: string; // 接收商品服务ID（string）
+    }
+  >;
   description?: string;
 };
 
-export type OrderDetailShape = {
-  user: { name: string };
-  merchant: { name: string };
-  userId: number;
-  merchantId: number;
-  orderId: number;
-  status: OrderStatus;
-  createdAt: Date;
-  detail?: {
-    addressFrom?: {
-      addressInfoId: number;
-      name: string;
-      phone: string;
-      address: string;
-      longitude: number;
-      latitude: number;
-    };
-    addressTo?: {
-      addressInfoId: number;
-      name: string;
-      phone: string;
-      address: string;
-      longitude: number;
-      latitude: number;
-    };
-    timelineItems: Array<{ shippingStatus: ShippingStatus; time: Date; description?: string }>;
+export type UpdateOrderServicePayload = {
+  status?: OrderStatus | undefined;
+  totalPrice?: number | undefined;
+  shippingInfo?: Optional<Address, 'name' | 'phone' | 'address'> | undefined;
+  products?: Array<Product> | undefined;
+};
+
+export type UpdateOrderBody = {
+  status?: OrderStatus;
+  totalPrice?: number;
+  shippingInfo?: Optional<Address, 'name' | 'phone' | 'address'> & {
+    addressInfoId: string; // 接收地址服务ID（string）
   };
-  orderItems: Array<{
-    quantity: number;
-    product: { productId: number; name: string; price: unknown };
-  }>;
+  products?: Array<
+    Optional<Product, 'name' | 'description' | 'price'> & {
+      productId: string; // 接收商品服务ID（string）
+    }
+  >;
 };

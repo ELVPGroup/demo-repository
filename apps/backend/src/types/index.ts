@@ -37,3 +37,6 @@ export interface SortParams {
   sort: 'asc' | 'desc'; // 排序顺序
   sortBy: string; // 排序字段
 }
+
+/** 工具类型：将对象中选中的属性变为可选 */
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

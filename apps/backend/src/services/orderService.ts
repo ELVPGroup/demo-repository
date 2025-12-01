@@ -4,7 +4,7 @@ import type {
   MerchantOrderListFilterParams,
   ClientOrderListFilterParams,
   CreateOrderPayload,
-  OrderDetailShape,
+  UpdateOrderServicePayload,
 } from '../types/order.js';
 import { orderModel } from '../models/orderModel.js';
 import { userModel } from '../models/userModel.js';
@@ -25,7 +25,7 @@ import { productModel } from '@/models/productModel.js';
 import { generateServiceId } from '@/utils/serverIdHandler.js';
 import { ServiceKey } from '@/utils/serverIdHandler.js';
 import { getDictName, orderStatusDict, shippingStatusDict } from '@/utils/dicts.js';
-import type { ShippingStatus } from 'generated/prisma/enums.js';
+import { getDefinedKeyValues } from '@/utils/general.js';
 
 export class OrderService {
   /**
@@ -115,6 +115,9 @@ export class OrderService {
     });
   }
 
+  /**
+   * 商家创建订单
+   */
   async createOrder(payload: CreateOrderPayload) {
     const { userId, merchantId, shippingFromId, shippingTo, items, description } = payload;
 
@@ -183,6 +186,81 @@ export class OrderService {
     return result;
   }
 
+  /**
+   * 商家更新订单状态
+   */
+  async updateOrderInfo(
+    merchantId: number,
+    orderId: number,
+    updatePayload: UpdateOrderServicePayload
+  ) {
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      throw new Error('订单不存在');
+    }
+    if (order.merchantId !== merchantId) {
+      throw new Error('没有权限更新该订单');
+    }
+    // 更新订单事务
+    await prisma.$transaction(async (tx) => {
+      const changes: string[] = []; // 记录变更
+
+      if (updatePayload.status) {
+        // 更新订单状态
+        await tx.order.update({ where: { orderId }, data: { status: updatePayload.status } });
+        changes.push(`订单状态更新为: ${getDictName(updatePayload.status, orderStatusDict)}`);
+      }
+
+      if (updatePayload.shippingInfo) {
+        // 更新收货地址信息
+        const { addressInfoId, name, phone, address } = updatePayload.shippingInfo;
+        const addressUpdate: Record<string, string> = {};
+        // 将非空字段添加到更新对象
+        Object.assign(addressUpdate, getDefinedKeyValues({ name, phone, address }));
+        if (Object.keys(addressUpdate).length > 0) {
+          await tx.addressInfo.update({ where: { addressInfoId }, data: addressUpdate });
+          changes.push('收货地址更新');
+        }
+      }
+
+      if (updatePayload.products && updatePayload.products.length > 0) {
+        // 更新订单商品信息
+        for (const product of updatePayload.products) {
+          const { productId, amount, name, description, price } = product;
+          if (amount !== undefined) {
+            await tx.orderItem.upsert({
+              where: { orderId_productId: { orderId, productId } },
+              update: { quantity: amount },
+              create: { orderId, productId, quantity: amount },
+            });
+          }
+
+          const productUpdate: Record<string, unknown> = {};
+          // 将非空字段添加到更新对象
+          Object.assign(productUpdate, getDefinedKeyValues({ name, description, price }));
+          if (Object.keys(productUpdate).length > 0) {
+            await tx.product.update({ where: { productId }, data: productUpdate });
+          }
+        }
+      }
+
+      if (changes.length > 0) {
+        await tx.timelineItem.create({
+          data: {
+            orderDetail: { connect: { orderId } },
+            // 物流状态描述更新
+            ...(changes.length > 0 ? { description: changes.join('; ') } : {}),
+          },
+        });
+      }
+    });
+
+    return this.getOrderDetail(orderId);
+  }
+
+  /**
+   * 获取订单详情
+   */
   async getOrderDetail(orderId: number) {
     const order = await orderModel.findById(orderId, true);
     if (!order) {

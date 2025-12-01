@@ -10,6 +10,13 @@ export class OrderModel {
     return prisma.order.create({ data });
   }
 
+  async update(orderId: number, data: Prisma.OrderUpdateInput) {
+    return prisma.order.update({
+      where: { orderId },
+      data,
+    });
+  }
+
   // 查询订单详情需要的Payload
   private findByIdDetailPayload = {
     include: {
@@ -32,7 +39,7 @@ export class OrderModel {
 
   async findById(
     orderId: number,
-    withDetail: true
+    withDetail?: boolean
   ): Promise<Prisma.OrderGetPayload<typeof this.findByIdDetailPayload> | null>;
   async findById(orderId: number, withDetail: boolean = false) {
     return prisma.order.findUnique({

@@ -3,9 +3,12 @@ import { orderService } from '@/services/orderService.js';
 import { addressModel } from '@/models/addressModel.js';
 import { extractRoleId } from '@/utils/roleHandler.js';
 import { type SortParams, type PaginationParams } from '@/types/index.js';
-import type { OrderStatus } from '@/types/order.js';
+import type { OrderStatus, UpdateOrderBody } from '@/types/order.js';
 import type { CreateOrderBody } from '@/types/order.js';
 import { parseServiceId } from '@/utils/serverIdHandler.js';
+import { getDictKey, orderStatusDict } from '@/utils/dicts.js';
+import type { UpdateOrderServicePayload } from '@/types/order.js';
+import { getDefinedKeyValues } from '@/utils/general.js';
 
 type MerchantOrderListParams = {
   merchantId: number;
@@ -174,6 +177,64 @@ export class MerchantOrderController {
       ctx.status = 400;
       ctx.body = {
         _message: error instanceof Error ? error.message : '获取订单详情失败',
+      };
+    }
+  }
+
+  /**
+   * 更新订单信息（商家端）
+   */
+  async updateOrderInfo(ctx: Context): Promise<void> {
+    try {
+      const { orderId } = ctx.params as { orderId: string };
+      const body = ctx.request.body as UpdateOrderBody;
+
+      const updatePayload = {
+        status: getDictKey(body.status!, orderStatusDict) as OrderStatus,
+        ...(body.shippingInfo?.addressInfoId
+          ? {
+              shippingInfo: getDefinedKeyValues({
+                addressInfoId: parseServiceId(body.shippingInfo.addressInfoId).id,
+                name: body.shippingInfo.name,
+                phone: body.shippingInfo.phone,
+                address: body.shippingInfo.address,
+              }) as UpdateOrderServicePayload['shippingInfo'],
+            }
+          : {}),
+        ...(Array.isArray(body.products) && body.products.length > 0
+          ? {
+              products: body.products
+                .map((product) =>
+                  getDefinedKeyValues({
+                    productId: product.productId ? parseServiceId(product.productId).id : undefined,
+                    name: product.name,
+                    description: product.description,
+                    price: product.price !== undefined ? Number(product.price) : undefined,
+                    amount: product.amount !== undefined ? Number(product.amount) : undefined,
+                  })
+                )
+                .filter(
+                  (product) => typeof product['productId'] === 'number'
+                ) as UpdateOrderServicePayload['products'],
+            }
+          : {}),
+      };
+
+      const result = await orderService.updateOrderInfo(
+        (extractRoleId(ctx.state['user']) as { merchantId: number }).merchantId,
+        parseServiceId(orderId).id,
+        updatePayload
+      );
+
+      ctx.status = 200;
+      ctx.body = {
+        _data: result,
+        _message: '更新订单信息成功',
+      };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = {
+        _message: error instanceof Error ? error.message : '更新订单信息失败',
       };
     }
   }

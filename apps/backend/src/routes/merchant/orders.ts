@@ -24,4 +24,10 @@ router.get('/detail/:orderId', authMiddleware, (ctx) =>
   merchantOrderController.getOrderDetail(ctx)
 );
 
+/**
+ * PUT /api/merchant/orders/{orderId}
+ * 更新订单状态（商家端）
+ */
+router.put('/:orderId', authMiddleware, (ctx) => merchantOrderController.updateOrderInfo(ctx));
+
 export default router;
