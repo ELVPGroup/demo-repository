@@ -1,5 +1,5 @@
 import type { Context } from 'koa';
-import { addressService } from '../services/addressService.js';
+import { addressService } from '@/services/addressService.js';
 
 interface AddressItem {
   addressInfoId: number;

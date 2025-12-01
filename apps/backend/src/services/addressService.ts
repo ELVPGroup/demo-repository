@@ -1,4 +1,5 @@
-import prisma from '../db.js';
+import { addressModel } from '@/models/addressModel.js';
+import type { Prisma } from 'generated/prisma/client.js';
 
 interface BaseAddressPayload {
   userId?: number;
@@ -40,8 +41,8 @@ export class AddressService {
    * 获取商家/用户的地址列表
    */
   async getAddressList(payload: BaseAddressPayload) {
-    const where = this.extractRoleId(payload);
-    const addressList = await prisma.addressInfo.findMany({ where: { ...where } });
+    const where = this.extractRoleId(payload) as Prisma.AddressInfoWhereInput;
+    const addressList = await addressModel.findMany({ ...where });
     return addressList;
   }
 
@@ -51,15 +52,13 @@ export class AddressService {
   async createAddress(payload: CreateAddressPayload) {
     const { name, phone, address } = payload;
     const roleId = this.extractRoleId(payload);
-    const newAddress = await prisma.addressInfo.create({
-      data: {
-        name,
-        phone,
-        address,
-        longitude: 0,
-        latitude: 0,
-        ...roleId,
-      },
+    const newAddress = await addressModel.create({
+      name,
+      phone,
+      address,
+      longitude: 0,
+      latitude: 0,
+      ...roleId,
     });
     return newAddress;
   }
@@ -77,9 +76,7 @@ export class AddressService {
     if (phone) updateData['phone'] = phone;
     if (address) updateData['address'] = address;
 
-    const existingAddress = await prisma.addressInfo.findUnique({
-      where: { addressInfoId },
-    });
+    const existingAddress = await addressModel.findById(addressInfoId);
     if (!existingAddress) {
       throw new Error('地址不存在');
     }
@@ -95,10 +92,7 @@ export class AddressService {
       throw new Error('没有更新该地址的权限');
     }
 
-    const updatedAddress = await prisma.addressInfo.update({
-      where: { addressInfoId },
-      data: updateData,
-    });
+    const updatedAddress = await addressModel.updateById(addressInfoId, updateData);
     return updatedAddress;
   }
 
@@ -109,9 +103,7 @@ export class AddressService {
     const { addressInfoId } = payload;
     const roleId = this.extractRoleId(payload);
 
-    const existingAddress = await prisma.addressInfo.findUnique({
-      where: { addressInfoId },
-    });
+    const existingAddress = await addressModel.findById(addressInfoId);
     if (!existingAddress) {
       throw new Error('地址不存在');
     }
@@ -124,9 +116,7 @@ export class AddressService {
       throw new Error('没有删除该地址的权限');
     }
 
-    const deletedAddress = await prisma.addressInfo.delete({
-      where: { addressInfoId: existingAddress.addressInfoId },
-    });
+    const deletedAddress = await addressModel.deleteById(existingAddress.addressInfoId);
     return deletedAddress;
   }
 }
