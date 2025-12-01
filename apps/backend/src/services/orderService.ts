@@ -4,6 +4,7 @@ import type {
   MerchantOrderListFilterParams,
   ClientOrderListFilterParams,
   CreateOrderPayload,
+  OrderDetailShape,
 } from '../types/order.js';
 import { orderModel } from '../models/orderModel.js';
 import { userModel } from '../models/userModel.js';
@@ -23,7 +24,8 @@ import { addressModel } from '@/models/addressModel.js';
 import { productModel } from '@/models/productModel.js';
 import { generateServiceId } from '@/utils/serverIdHandler.js';
 import { ServiceKey } from '@/utils/serverIdHandler.js';
-import { getDictName, orderStatusDict } from '@/utils/dicts.js';
+import { getDictName, orderStatusDict, shippingStatusDict } from '@/utils/dicts.js';
+import type { ShippingStatus } from 'generated/prisma/enums.js';
 
 export class OrderService {
   /**
@@ -179,6 +181,70 @@ export class OrderService {
     });
 
     return result;
+  }
+
+  async getOrderDetail(orderId: number) {
+    const order = await orderModel.findById(orderId, true);
+    if (!order) {
+      throw new Error('订单不存在');
+    }
+
+    const from = order.detail?.addressFrom;
+    const to = order.detail?.addressTo;
+    const timeline = order.detail?.timelineItems ?? [];
+    const latest = timeline.length > 0 ? timeline[timeline.length - 1] : undefined;
+    // 计算订单商品总数和总金额
+    const amount = order.orderItems.reduce(
+      (acc: number, it: { quantity: number }) => acc + it.quantity,
+      0
+    );
+    const totalPrice = order.orderItems.reduce(
+      (acc, it) => acc + it.quantity * (it.product.price as unknown as number),
+      0
+    );
+
+    return {
+      orderId: generateServiceId(order.orderId, ServiceKey.order),
+      merchantId: generateServiceId(order.merchantId!, ServiceKey.merchant),
+      merchantName: order.merchant?.name ?? '',
+      userId: generateServiceId(order.userId!, ServiceKey.client),
+      userName: order.user?.name ?? '',
+      status: getDictName(order.status, orderStatusDict),
+      createdAt: order.createdAt,
+      shippingFrom: from
+        ? {
+            addressInfoId: generateServiceId(from.addressInfoId, ServiceKey.addressInfo),
+            name: from.name,
+            phone: from.phone,
+            address: from.address,
+            location: [from.longitude, from.latitude],
+          }
+        : undefined,
+      shippingTo: to
+        ? {
+            addressInfoId: generateServiceId(to.addressInfoId, ServiceKey.addressInfo),
+            name: to.name,
+            phone: to.phone,
+            address: to.address,
+            location: [to.longitude, to.latitude],
+          }
+        : undefined,
+      products: order.orderItems.map((orderItem) => ({
+        productId: generateServiceId(orderItem.productId, ServiceKey.product),
+        name: orderItem.product.name,
+        price: Number(orderItem.product.price),
+        amount: orderItem.quantity,
+        description: orderItem.product.description ?? '',
+      })),
+      amount,
+      totalPrice,
+      shippingStatus: latest ? getDictName(latest.shippingStatus, shippingStatusDict) : undefined,
+      timeline: timeline.map((timelineItem) => ({
+        shippingStatus: getDictName(timelineItem.shippingStatus, shippingStatusDict),
+        time: timelineItem.time,
+        description: timelineItem.description ?? '',
+      })),
+    };
   }
 }
 

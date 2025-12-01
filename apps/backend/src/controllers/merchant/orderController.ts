@@ -110,7 +110,7 @@ export class MerchantOrderController {
         merchantId = from.merchantId;
       } else if (userState?.side === 'merchant') {
         merchantId = userState.id;
-        const bodyUserId = Number(body.userId);
+        const bodyUserId = parseServiceId(body.userId).id;
         if (!bodyUserId || Number.isNaN(bodyUserId)) {
           ctx.status = 400;
           ctx.body = { _message: '用户ID无效' };
@@ -152,6 +152,28 @@ export class MerchantOrderController {
       ctx.status = 400;
       ctx.body = {
         _message: error instanceof Error ? error.message : '创建订单失败',
+      };
+    }
+  }
+
+  /**
+   * 获取订单详情（商家端）
+   */
+  async getOrderDetail(ctx: Context): Promise<void> {
+    try {
+      const { orderId } = ctx.params as { orderId: string };
+
+      const result = await orderService.getOrderDetail(parseServiceId(orderId).id);
+
+      ctx.status = 200;
+      ctx.body = {
+        _data: result,
+        _message: '获取订单详情成功',
+      };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = {
+        _message: error instanceof Error ? error.message : '获取订单详情失败',
       };
     }
   }

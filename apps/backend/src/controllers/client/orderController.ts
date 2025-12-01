@@ -1,10 +1,8 @@
 import type { Context } from 'koa';
 import { orderService } from '@/services/orderService.js';
-import { addressModel } from '@/models/addressModel.js';
 import { extractRoleId } from '@/utils/roleHandler.js';
 import { type SortParams, type PaginationParams } from '@/types/index.js';
 import type { OrderStatus } from '@/types/order.js';
-import type { CreateOrderBody } from '@/types/order.js';
 import { parseServiceId } from '@/utils/serverIdHandler.js';
 
 type UserOrderListParams = {
@@ -50,6 +48,28 @@ export class UserOrderController {
       ctx.status = 400;
       ctx.body = {
         _message: error instanceof Error ? error.message : '获取订单列表失败',
+      };
+    }
+  }
+
+  /**
+   * 获取订单详情（用户端）
+   */
+  async getOrderDetail(ctx: Context): Promise<void> {
+    try {
+      const { orderId } = ctx.params as { orderId: string };
+
+      const result = await orderService.getOrderDetail(parseServiceId(orderId).id);
+
+      ctx.status = 200;
+      ctx.body = {
+        _data: result,
+        _message: '获取订单详情成功',
+      };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = {
+        _message: error instanceof Error ? error.message : '获取订单详情失败',
       };
     }
   }

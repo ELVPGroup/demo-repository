@@ -16,4 +16,12 @@ router.post('/list', authMiddleware, (ctx) => merchantOrderController.getOrderLi
  */
 router.post('/', authMiddleware, (ctx) => merchantOrderController.create(ctx));
 
+/**
+ * GET /api/merchant/orders/detail/{orderId}
+ * 获取订单详情（商家端）
+ */
+router.get('/detail/:orderId', authMiddleware, (ctx) =>
+  merchantOrderController.getOrderDetail(ctx)
+);
+
 export default router;

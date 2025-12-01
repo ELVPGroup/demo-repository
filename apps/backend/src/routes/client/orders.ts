@@ -10,4 +10,10 @@ const router = new Router({ prefix: '/api/client/orders' });
  */
 router.post('/', authMiddleware, (ctx) => userOrderController.getOrderList(ctx));
 
+/**
+ * GET /api/client/orders/detail/{orderId}
+ * 获取用户订单详情
+ */
+router.get('/detail/:orderId', authMiddleware, (ctx) => userOrderController.getOrderDetail(ctx));
+
 export default router;

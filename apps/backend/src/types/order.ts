@@ -1,4 +1,5 @@
 export type OrderStatus = 'PENDING' | 'SHIPPED' | 'COMPLETED' | 'CANCELED';
+import type { ShippingStatus } from 'generated/prisma/enums.js';
 import type { PaginationParams, SortParams } from './index.js';
 
 export type MerchantOrderListParams = {
@@ -61,4 +62,37 @@ export type CreateOrderBody = {
     amount: number; // 作为下单数量
   }>;
   description?: string;
+};
+
+export type OrderDetailShape = {
+  user: { name: string };
+  merchant: { name: string };
+  userId: number;
+  merchantId: number;
+  orderId: number;
+  status: OrderStatus;
+  createdAt: Date;
+  detail?: {
+    addressFrom?: {
+      addressInfoId: number;
+      name: string;
+      phone: string;
+      address: string;
+      longitude: number;
+      latitude: number;
+    };
+    addressTo?: {
+      addressInfoId: number;
+      name: string;
+      phone: string;
+      address: string;
+      longitude: number;
+      latitude: number;
+    };
+    timelineItems: Array<{ shippingStatus: ShippingStatus; time: Date; description?: string }>;
+  };
+  orderItems: Array<{
+    quantity: number;
+    product: { productId: number; name: string; price: unknown };
+  }>;
 };

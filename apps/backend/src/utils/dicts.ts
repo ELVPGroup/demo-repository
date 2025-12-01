@@ -1,10 +1,19 @@
-import type { OrderStatus } from '@/types/order.js';
+import type { OrderStatus, ShippingStatus } from 'generated/prisma/enums.js';
 
 // 订单状态字典
 export const orderStatusDict: Record<OrderStatus, string> = {
   PENDING: '待发货',
   SHIPPED: '运输中',
   COMPLETED: '已完成',
+  CANCELED: '已取消',
+};
+
+export const shippingStatusDict: Record<ShippingStatus, string> = {
+  PENDING: '待发货',
+  PACKING: '已揽收',
+  SHIPPED: '运输中',
+  IN_TRANSIT: '派送中',
+  DELIVERED: '已签收',
   CANCELED: '已取消',
 };
 
