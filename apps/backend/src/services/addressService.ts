@@ -1,4 +1,5 @@
 import { addressModel } from '@/models/addressModel.js';
+import { amapClient } from '@/amapClient.js';
 import type { Prisma } from 'generated/prisma/client.js';
 
 interface BaseAddressPayload {
@@ -47,19 +48,31 @@ export class AddressService {
   }
 
   /**
+   * 验证地址并创建带有坐标的地址对象
+   */
+  async geocodeAndBuildCreateData(payload: CreateAddressPayload) {
+    const roleId = this.extractRoleId(payload);
+    const geo = await amapClient.geocode(payload.address);
+    if (!geo.location) {
+      throw new Error('输入的地址无法解析坐标');
+    }
+    const [longitude, latitude] = geo.location;
+    return {
+      name: payload.name,
+      phone: payload.phone,
+      address: payload.address,
+      longitude,
+      latitude,
+      ...roleId,
+    };
+  }
+
+  /**
    * 添加地址
    */
   async createAddress(payload: CreateAddressPayload) {
-    const { name, phone, address } = payload;
-    const roleId = this.extractRoleId(payload);
-    const newAddress = await addressModel.create({
-      name,
-      phone,
-      address,
-      longitude: 0,
-      latitude: 0,
-      ...roleId,
-    });
+    const data = await this.geocodeAndBuildCreateData(payload);
+    const newAddress = await addressModel.create(data);
     return newAddress;
   }
 
@@ -71,10 +84,19 @@ export class AddressService {
     const roleId = this.extractRoleId(payload);
 
     // 构建动态更新字段（只包含提供的字段）
-    const updateData: Record<string, string> = {};
+    const updateData: Prisma.AddressInfoUpdateInput = {};
     if (name) updateData['name'] = name;
     if (phone) updateData['phone'] = phone;
-    if (address) updateData['address'] = address;
+    if (address) {
+      updateData['address'] = address;
+      const geo = await amapClient.geocode(address);
+      if (!geo.location) {
+        throw new Error('输入的地址无法解析坐标');
+      }
+      const [longitude, latitude] = geo.location;
+      updateData['longitude'] = longitude;
+      updateData['latitude'] = latitude;
+    }
 
     const existingAddress = await addressModel.findById(addressInfoId);
     if (!existingAddress) {
