@@ -22,10 +22,16 @@ type OrderWithItems = {
 import prisma from '../db.js';
 import { addressModel } from '@/models/addressModel.js';
 import { productModel } from '@/models/productModel.js';
+import { addressService } from '@/services/addressService.js';
 import { generateServiceId } from '@/utils/serverIdHandler.js';
 import { ServiceKey } from '@/utils/serverIdHandler.js';
 import { getDictName, orderStatusDict, shippingStatusDict } from '@/utils/dicts.js';
-import { getDefinedKeyValues } from '@/utils/general.js';
+import {
+  getDefinedKeyValues,
+  haversineDistanceMeters,
+  METERS_PER_DEGREE_LAT,
+  metersPerDegreeLonAtLat,
+} from '@/utils/general.js';
 
 export class OrderService {
   /**
@@ -116,6 +122,108 @@ export class OrderService {
   }
 
   /**
+   * 获取配送区域订单列表
+   */
+  async getDeliveryAreaOrderList(
+    payload: MerchantOrderListParams & Partial<MerchantOrderListFilterParams>
+  ) {
+    // 查找商家之前配置的配送区域
+    const deliveryArea = await prisma.deliveryArea.findUnique({
+      where: { merchantId: payload.merchantId },
+    });
+    if (!deliveryArea) {
+      throw new Error('未配置配送区域');
+    }
+
+    const where: Record<string, unknown> = {};
+    where['merchantId'] = payload.merchantId;
+    if (payload.status !== undefined) {
+      where['status'] = payload.status;
+    }
+
+    let ordersRaw: Array<
+      OrderWithItems & {
+        detail: { addressTo: { longitude: number; latitude: number } } | null;
+      }
+    > = [];
+
+    // 配送区域中心点与半径处理
+    const centerLon = Number(deliveryArea.longitude);
+    const centerLat = Number(deliveryArea.latitude);
+    const radiusMeters = Number(deliveryArea.radius);
+
+    // 根据半径计算纬度方向上的最大偏移量
+    const latDelta = radiusMeters / METERS_PER_DEGREE_LAT;
+    // 根据当前纬度计算经度方向上的最大偏移量（经度1°长度随纬度变化）
+    const lonDelta = radiusMeters / metersPerDegreeLonAtLat(centerLat);
+
+    // 先使用矩形边界做粗筛，减少后续精确计算量
+    where['detail'] = {
+      is: {
+        addressTo: {
+          is: {
+            longitude: { gte: centerLon - lonDelta, lte: centerLon + lonDelta },
+            latitude: { gte: centerLat - latDelta, lte: centerLat + latDelta },
+          },
+        },
+      },
+    };
+
+    ordersRaw = (await orderModel.findMany({
+      where,
+      ...(payload.offset !== undefined ? { skip: payload.offset } : {}),
+      ...(payload.limit !== undefined ? { take: payload.limit } : {}),
+      ...(payload.sort && payload.sortBy ? { orderBy: { [payload.sortBy]: payload.sort } } : {}),
+      include: {
+        orderItems: {
+          include: { product: { select: { price: true } } },
+        },
+        user: { select: { name: true } },
+        merchant: { select: { name: true } },
+        detail: { include: { addressTo: true } },
+      },
+    })) as typeof ordersRaw;
+
+    ordersRaw = ordersRaw.filter((o) => {
+      const to = o.detail?.addressTo;
+      if (!to) return false;
+      const d = haversineDistanceMeters([centerLon, centerLat], [to.longitude, to.latitude]);
+      return d <= radiusMeters;
+    });
+
+    return ordersRaw.map((order) => {
+      const to = order.detail?.addressTo;
+      const location = to ? ([to.longitude, to.latitude] as [number, number]) : undefined;
+      const distance = location
+        ? haversineDistanceMeters([centerLon, centerLat], location)
+        : undefined;
+      const inRange = typeof distance === 'number' ? distance <= radiusMeters : false;
+      const amount = order.orderItems.reduce(
+        (acc: number, it: { quantity: number }) => acc + it.quantity,
+        0
+      );
+      const totalPrice = order.orderItems.reduce(
+        (acc: number, it: { quantity: number; product: { price: number } }) =>
+          acc + it.quantity * it.product.price,
+        0
+      );
+      return {
+        orderId: generateServiceId(order.orderId, ServiceKey.order),
+        status: getDictName<OrderStatus>(order.status, orderStatusDict),
+        createdAt: order.createdAt,
+        userId: generateServiceId(order.userId!, ServiceKey.client),
+        merchantId: generateServiceId(order.merchantId!, ServiceKey.merchant),
+        amount,
+        totalPrice,
+        ...(location ? { location } : {}),
+        ...(distance !== undefined ? { distance } : {}),
+        inRange,
+        userName: order.user?.name ?? '',
+      };
+    });
+  }
+
+  /**
    * 商家创建订单
    */
   async createOrder(payload: CreateOrderPayload) {
@@ -139,16 +247,14 @@ export class OrderService {
     }
     // 使用事务保证数据正确建立
     const result = await prisma.$transaction(async (tx) => {
-      const to = await tx.addressInfo.create({
-        data: {
-          name: shippingTo.name,
-          phone: shippingTo.phone,
-          address: shippingTo.address,
-          longitude: shippingTo.longitude ?? 0,
-          latitude: shippingTo.latitude ?? 0,
-          userId,
-        },
+      // 创建收货地址并存储
+      const toData = await addressService.geocodeAndBuildCreateData({
+        userId,
+        name: shippingTo.name,
+        phone: shippingTo.phone,
+        address: shippingTo.address,
       });
+      const to = await tx.addressInfo.create({ data: toData });
 
       const order = await tx.order.create({
         data: {

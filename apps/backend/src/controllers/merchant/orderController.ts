@@ -3,21 +3,17 @@ import { orderService } from '@/services/orderService.js';
 import { addressModel } from '@/models/addressModel.js';
 import { extractRoleId } from '@/utils/roleHandler.js';
 import { type SortParams, type PaginationParams } from '@/types/index.js';
-import type { OrderStatus, UpdateOrderBody } from '@/types/order.js';
+import type {
+  OrderStatus,
+  UpdateOrderBody,
+  MerchantOrderListParams,
+  MerchantOrderListFilterParams,
+} from '@/types/order.js';
 import type { CreateOrderBody } from '@/types/order.js';
 import { parseServiceId } from '@/utils/serverIdHandler.js';
 import { getDictKey, orderStatusDict } from '@/utils/dicts.js';
 import type { UpdateOrderServicePayload } from '@/types/order.js';
 import { getDefinedKeyValues } from '@/utils/general.js';
-
-type MerchantOrderListParams = {
-  merchantId: number;
-} & Partial<SortParams & PaginationParams>;
-
-type FilterParams = {
-  status?: OrderStatus;
-  customerName?: string;
-};
 
 /**
  * 商家端订单控制器
@@ -30,7 +26,7 @@ export class MerchantOrderController {
     try {
       const { sort, sortBy, offset, limit, ...filterParams } = ctx.request.body as SortParams &
         PaginationParams &
-        FilterParams;
+        MerchantOrderListFilterParams;
 
       const params: MerchantOrderListParams = {
         ...(extractRoleId(ctx.state['user']) as { merchantId: number }),
@@ -56,6 +52,42 @@ export class MerchantOrderController {
       };
     }
   }
+  /**
+   * 获取配送区域订单列表
+   */
+  async getDeliveryAreaOrders(ctx: Context): Promise<void> {
+    try {
+      const { sort, sortBy, offset, limit, status } = ctx.request.body as {
+        sort?: 'asc' | 'desc';
+        sortBy?: string;
+        offset?: number;
+        limit?: number;
+        status?: string;
+      };
+
+      const mappedStatus = status ? getDictKey(status, orderStatusDict) : undefined;
+      const params: MerchantOrderListParams & Partial<MerchantOrderListFilterParams> = {
+        ...(extractRoleId(ctx.state['user']) as { merchantId: number }),
+        ...(sort && sortBy ? { sort, sortBy } : {}),
+        ...(offset !== undefined ? { offset } : {}),
+        ...(limit !== undefined ? { limit } : {}),
+        ...(mappedStatus ? { status: mappedStatus } : {}),
+      };
+
+      const result = await orderService.getDeliveryAreaOrderList(params);
+
+      ctx.status = 200;
+      ctx.body = {
+        _data: result,
+        _message: '获取配送区域订单列表成功',
+      };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = {
+        _message: error instanceof Error ? error.message : '获取配送区域订单列表失败',
+      };
+    }
+  }
 
   /**
    * 创建订单（商家端）
@@ -64,7 +96,7 @@ export class MerchantOrderController {
     try {
       const body = ctx.request.body as CreateOrderBody;
 
-      const shippingFromId = Number(body.shippingFromId);
+      const shippingFromId = parseServiceId(body.shippingFromId).id;
       if (!shippingFromId || Number.isNaN(shippingFromId)) {
         ctx.status = 400;
         ctx.body = { _message: '发货地址ID无效' };

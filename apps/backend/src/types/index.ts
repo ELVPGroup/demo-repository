@@ -38,5 +38,8 @@ export interface SortParams {
   sortBy: string; // 排序字段
 }
 
+/** 地理坐标，经度、纬度 */
+export type GeoPoint = [number, number];
+
 /** 工具类型：将对象中选中的属性变为可选 */
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;

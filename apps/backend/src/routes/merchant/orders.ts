@@ -11,6 +11,14 @@ const router = new Router({ prefix: '/api/merchant/orders' });
 router.post('/list', authMiddleware, (ctx) => merchantOrderController.getOrderList(ctx));
 
 /**
+ * POST /api/merchant/orders/delivery-area
+ * 获取配送区域订单列表
+ */
+router.post('/delivery-area', authMiddleware, (ctx) =>
+  merchantOrderController.getDeliveryAreaOrders(ctx)
+);
+
+/**
  * POST /api/merchant/orders
  * 创建订单（商家端）
  */
