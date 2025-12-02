@@ -1,6 +1,8 @@
-import { Form, Input, Checkbox, Button, message } from 'antd';
+import { Form, Input, Checkbox, Button } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { apiAxiosInstance } from '../utils/axios';
+import { useUserStore } from '../store/userStore';
 
 type LoginFieldType = {
   phone?: string;
@@ -20,35 +22,19 @@ export function LoginForm({ role }: LoginFormProps) {
   const handleLogin = async (values: LoginFieldType) => {
     try {
       setLoading(true);
-      // 暂时使用fetch，后续接入axios
-      const response = await fetch('/baseUrl/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: values.phone,
-          password: values.password,
-          side: role,
-        }),
+      const response = await apiAxiosInstance.post('/login', {
+        phone: values.phone,
+        password: values.password,
+        side: role,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        message.error(data.message || '登录失败');
+      const result = response.data;
+      if (!result || !result.data) {
         return;
       }
-
-      message.success('登录成功');
-      // 保存 token
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-      // 跳转到对应的页面
-      navigate(`/${role}`);
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '登录失败');
+      const { id, name, side, token } = result.data;
+      const remember = Boolean(values.remember);
+      useUserStore.getState().login({ id, name, side, token }, remember);
+      navigate(`/${side}`);
     } finally {
       setLoading(false);
     }
