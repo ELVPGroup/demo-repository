@@ -1,6 +1,8 @@
-import { Form, Input, Button, message } from 'antd';
+import { Form, Input, Button } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { apiAxiosInstance } from '../utils/axios';
+import { useUserStore } from '../store/userStore';
 
 type RegisterFieldType = {
   name?: string;
@@ -21,36 +23,19 @@ export function RegisterForm({ role }: RegisterFormProps) {
   const handleRegister = async (values: RegisterFieldType) => {
     try {
       setLoading(true);
-      // 暂时使用fetch，后续接入axios
-      const response = await fetch('/baseUrl/api/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: values.name,
-          phone: values.phone,
-          password: values.password,
-          side: role,
-        }),
+      const response = await apiAxiosInstance.post('/register', {
+        name: values.name,
+        phone: values.phone,
+        password: values.password,
+        side: role,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        message.error(data.message || '注册失败');
+      const result = response.data;
+      if (!result || !result.data) {
         return;
       }
-
-      message.success('注册成功');
-      // 保存 token
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-      // 跳转到对应的页面
-      navigate(`/${role}`);
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '注册失败');
+      const { id, name, side, token } = result.data;
+      useUserStore.getState().login({ id, name, side, token }, false);
+      navigate(`/${side}`);
     } finally {
       setLoading(false);
     }
