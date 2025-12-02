@@ -7,6 +7,7 @@ export enum ServiceKey {
   order = 'ORD',
   product = 'PRO',
   addressInfo = 'ADDR',
+  logisticsProvider = 'LOGI',
 }
 
 const MIN_ID_LENGTH = 6;

@@ -43,14 +43,16 @@ model User {
 
 model Merchant {
   // SERIAL - 🔑 PK, not null, unique, autoincrement
-  merchantId   Int           @id @default(autoincrement()) @map("merchantId")
-  name         String        @db.VarChar(255)
-  phone        String        @unique @db.VarChar(20)
-  password     String        @db.VarChar(255)
-  addresses    AddressInfo[]
-  orders       Order[]
+  merchantId         Int                 @id @default(autoincrement()) @map("merchantId")
+  name               String              @db.VarChar(255)
+  phone              String              @unique @db.VarChar(20)
+  password           String              @db.VarChar(255)
+  addresses          AddressInfo[]
+  orders             Order[]
   // 一个商家对应一个配送范围
-  deliveryArea DeliveryArea?
+  deliveryArea       DeliveryArea?
+  // 多个
+  logisticsProviders LogisticsProvider[]
 
   @@map("merchants")
 }
@@ -179,4 +181,15 @@ model DeliveryArea {
   // INTEGER - 🔑 PK, not null, unique, autoincrement
   @@id([merchantId])
   @@map("deliveryArea")
+}
+
+model LogisticsProvider {
+  // INTEGER - 🔑 PK, not null, unique, autoincrement
+  logisticsId Int    @id @default(autoincrement()) @map("logisticsId")
+  name        String @unique @db.VarChar(255)
+  speed       Float  @db.DoublePrecision
+
+  merchants Merchant[]
+
+  @@map("logisticsProviders")
 }
