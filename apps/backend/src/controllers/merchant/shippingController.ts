@@ -6,7 +6,10 @@ import { parseServiceId } from '@/utils/serverIdHandler.js';
 export class MerchantShippingController {
   async send(ctx: Context): Promise<void> {
     try {
-      const { orderId } = ctx.request.body as { orderId?: string };
+      const { orderId, logisticsId } = ctx.request.body as {
+        orderId: string;
+        logisticsId: string;
+      };
 
       if (!orderId) {
         ctx.status = 400;
@@ -23,7 +26,17 @@ export class MerchantShippingController {
         return;
       }
 
-      const result = await orderService.sendShipment(merchantId, numericOrderId);
+      if (!logisticsId) {
+        ctx.status = 400;
+        ctx.body = { _message: '请选择物流供应商' };
+        return;
+      }
+
+      const result = await orderService.sendShipment(
+        merchantId,
+        numericOrderId,
+        parseServiceId(logisticsId).id
+      );
 
       ctx.status = 200;
       ctx.body = {

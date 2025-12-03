@@ -11,7 +11,6 @@ import {
 import { baseResponseMiddleware } from './src/middleware/baseResponseMiddleware.js';
 
 const app = new Koa();
-const PORT = process.env['PORT'] || 3000;
 
 // 中间件
 // 跨域
@@ -32,10 +31,9 @@ app.use(async (ctx, next) => {
   if (ctx.path === '/health') {
     ctx.status = 200;
     ctx.body = {
-      title: 'success',
-      status: 200,
-      message: 'Health check passed',
-      data: { status: 'ok' },
+      _title: 'success',
+      _message: 'Health check passed',
+      _data: { status: 'ok' },
     };
     return;
   }
@@ -51,6 +49,4 @@ routers.forEach((router) => {
 // 404 处理
 app.use(notFoundMiddleware);
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+export default app;

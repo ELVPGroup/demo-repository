@@ -33,11 +33,10 @@ export class MerchantOrderController {
         // 添加可选排序参数
         ...(sort && sortBy ? { sort, sortBy } : {}),
         // 添加可选分页参数
-        ...(offset && limit ? { offset, limit } : {}),
+        ...(offset !== undefined && limit !== undefined ? { offset, limit } : {}),
         // 加入可选筛选参数
         ...filterParams,
       };
-
       const result = await orderService.getOrderList(params);
 
       ctx.status = 200;

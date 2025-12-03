@@ -1,5 +1,7 @@
 // 通用工具函数
 
+import type { GeoPoint } from '@/types/index.js';
+
 /**
  * 获取对象中 null 或 undefined 的字段
  * @param obj 输入对象
@@ -29,12 +31,12 @@ export function metersPerDegreeLonAtLat(lat: number) {
 }
 
 /**
- * 计算两个经纬度点之间的距离（单位：米）
+ * 计算球面上两个经纬度点之间的距离（单位：米）
  * @param origin 原点 [经度, 纬度]
  * @param dest 目标点 [经度, 纬度]
  * @returns 距离（米）
  */
-export function haversineDistanceMeters(origin: [number, number], dest: [number, number]) {
+export function haversineDistanceMeters(origin: GeoPoint, dest: GeoPoint) {
   const toRad = (v: number) => (v * Math.PI) / 180;
   const [lon1, lat1] = origin;
   const [lon2, lat2] = dest;
@@ -45,4 +47,26 @@ export function haversineDistanceMeters(origin: [number, number], dest: [number,
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return EARTH_RADIUS_M * c;
+}
+
+/**
+ * 解析高德地图折线编码
+ * @param line 折线编码字符串
+ * @returns 解析后的坐标数组，每个元素为 [经度, 纬度]
+ */
+export function parseAmapPolyline(line: string): GeoPoint[] {
+  return line
+    .split(';')
+    .map((f) => f.trim())
+    .filter(Boolean)
+    .map((p) => p.split(',').map(Number) as GeoPoint);
+}
+
+/**
+ * km/h 转换为 m/s
+ * @param kmh 速度（单位：千米/小时）
+ * @returns 速度（单位：米/秒）
+ */
+export function kmhToMps(kmh: number) {
+  return (kmh * 1000) / 3600;
 }

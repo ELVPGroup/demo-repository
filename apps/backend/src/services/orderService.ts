@@ -32,6 +32,7 @@ import {
   METERS_PER_DEGREE_LAT,
   metersPerDegreeLonAtLat,
 } from '@/utils/general.js';
+import { logisticsService } from '@/services/logisticsService.js';
 
 export class OrderService {
   /**
@@ -431,7 +432,7 @@ export class OrderService {
     };
   }
 
-  async sendShipment(merchantId: number, orderId: number) {
+  async sendShipment(merchantId: number, orderId: number, logisticsId: number) {
     const order = await orderModel.findById(orderId);
     if (!order) {
       throw new Error('订单不存在');
@@ -448,7 +449,23 @@ export class OrderService {
     if (order.status === 'CANCELED') {
       throw new Error('订单已取消，无法发货');
     }
-
+    // 检查物流供应商是否存在
+    const logistics = await prisma.logisticsProvider.findUnique({
+      where: { logisticsId },
+      include: { merchants: true },
+    });
+    if (!logistics) {
+      throw new Error('物流供应商不存在');
+    }
+    if (!logistics.merchants.some((merchant) => merchant.merchantId === merchantId)) {
+      throw new Error('该物流供应商不为商家提供服务');
+    }
+    const detail = await orderModel.findById(orderId, true);
+    const from = detail?.detail?.addressFrom;
+    const to = detail?.detail?.addressTo;
+    if (!from || !to) {
+      throw new Error('订单缺少发货或收货地址');
+    }
     await prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { orderId }, data: { status: 'SHIPPED' } });
       await tx.timelineItem.create({
@@ -459,9 +476,13 @@ export class OrderService {
         },
       });
     });
-
-    // TODO：Websocket 更新物流模拟位置
-
+    // 开始模拟发货轨迹
+    await logisticsService.simulateShipment(
+      orderId,
+      [from.longitude, from.latitude],
+      [to.longitude, to.latitude],
+      { speedKmh: logistics.speed }
+    );
     return this.getOrderDetail(orderId);
   }
 }
