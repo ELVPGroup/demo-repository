@@ -40,7 +40,7 @@ export function initWebSocket(server: Server) {
     // 处理 WebSocket 消息
     ws.on('message', (message) => {
       console.log('Received message:', message.toString());
-      handleMessage(ws, message.toString());
+      handleMessage(ws, message.toString(), req.user || {});
     });
 
     // 处理 WebSocket 关闭
