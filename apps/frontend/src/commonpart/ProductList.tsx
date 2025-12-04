@@ -1,4 +1,4 @@
- import React from 'react';
+import React from 'react';
 import { Card, Typography, Empty } from 'antd';
 import type { OrderProduct } from '@/types/orderDetailInterface';
 
@@ -14,11 +14,12 @@ interface ProductListProps {
 }
 
 const ProductList: React.FC<ProductListProps> = ({ products = [] }) => {
-  
   return (
     <Card
       title={
-        <Title level={4} style={{ margin: 0 }}>商品清单</Title>
+        <Title level={4} style={{ margin: 0 }}>
+          商品清单
+        </Title>
       }
       style={{
         margin: '20px 0',
@@ -56,14 +57,16 @@ const ProductList: React.FC<ProductListProps> = ({ products = [] }) => {
               >
                 Img
               </div>
-              
+
               {/* 商品信息 */}
               <div style={{ flex: 1 }}>
                 <div style={{ marginBottom: '4px' }}>{product.name}</div>
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>{product.description}</div>
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
+                  {product.description}
+                </div>
                 <Text type="secondary">x{product.amount}</Text>
               </div>
-              
+
               {/* 商品价格 */}
               <div style={{ fontWeight: '500', color: '#333' }}>
                 ¥{(product.price || 0).toFixed(2)}
@@ -74,6 +77,6 @@ const ProductList: React.FC<ProductListProps> = ({ products = [] }) => {
       )}
     </Card>
   );
-}
+};
 
 export default ProductList;

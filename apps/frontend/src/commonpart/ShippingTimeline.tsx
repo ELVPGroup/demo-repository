@@ -9,20 +9,19 @@ interface ShippingTimelineProps {
 }
 
 const ShippingTimeline: React.FC<ShippingTimelineProps> = ({ timeline = [] }) => {
-  
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
       const now = new Date();
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
-      
+
       const timeStr = date.toLocaleTimeString('zh-CN', {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false
+        hour12: false,
       });
-      
+
       if (date.toDateString() === now.toDateString()) {
         return `${timeStr} 今天`;
       } else if (date.toDateString() === yesterday.toDateString()) {
@@ -40,7 +39,11 @@ const ShippingTimeline: React.FC<ShippingTimelineProps> = ({ timeline = [] }) =>
 
   return (
     <Card
-      title={<Title level={4} style={{ margin: 0 }}>物流进度</Title>}
+      title={
+        <Title level={4} style={{ margin: 0 }}>
+          物流进度
+        </Title>
+      }
       style={{
         margin: '20px 0',
         borderRadius: '8px',
@@ -55,15 +58,9 @@ const ShippingTimeline: React.FC<ShippingTimelineProps> = ({ timeline = [] }) =>
             color: index === 0 ? 'green' : 'gray',
             children: (
               <>
-                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-                  {item.shippingStatus}
-                </div>
-                <div style={{ color: '#666', marginBottom: '4px' }}>
-                  {item.description}
-                </div>
-                <div style={{ fontSize: '12px', color: '#999' }}>
-                  {formatDate(item.time)}
-                </div>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{item.shippingStatus}</div>
+                <div style={{ color: '#666', marginBottom: '4px' }}>{item.description}</div>
+                <div style={{ fontSize: '12px', color: '#999' }}>{formatDate(item.time)}</div>
               </>
             ),
           }))}

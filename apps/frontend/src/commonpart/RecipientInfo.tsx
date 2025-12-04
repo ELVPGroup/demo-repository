@@ -16,8 +16,16 @@ const RecipientInfo: React.FC<RecipientInfoProps> = ({ addressInfo }) => {
   if (isEmpty) {
     return (
       <Card
-        title={<Title level={4} style={{ margin: 0 }}>收货人信息</Title>}
-        style={{ margin: '20px 0', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)' }}
+        title={
+          <Title level={4} style={{ margin: 0 }}>
+            收货人信息
+          </Title>
+        }
+        style={{
+          margin: '20px 0',
+          borderRadius: '8px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+        }}
       >
         <Empty description="暂无收货人信息" />
       </Card>
@@ -29,7 +37,11 @@ const RecipientInfo: React.FC<RecipientInfoProps> = ({ addressInfo }) => {
 
   return (
     <Card
-      title={<Title level={4} style={{ margin: 0 }}>收货人信息</Title>}
+      title={
+        <Title level={4} style={{ margin: 0 }}>
+          收货人信息
+        </Title>
+      }
       style={{
         margin: '20px 0',
         borderRadius: '8px',
@@ -37,13 +49,31 @@ const RecipientInfo: React.FC<RecipientInfoProps> = ({ addressInfo }) => {
       }}
     >
       <Descriptions column={1} labelStyle={{ width: '100px', fontWeight: 'bold' }}>
-        <Descriptions.Item label={<span><UserOutlined /> 收货人</span>}>
+        <Descriptions.Item
+          label={
+            <span>
+              <UserOutlined /> 收货人
+            </span>
+          }
+        >
           {info.name || '未提供'}
         </Descriptions.Item>
-        <Descriptions.Item label={<span><PhoneOutlined /> 电话</span>}>
+        <Descriptions.Item
+          label={
+            <span>
+              <PhoneOutlined /> 电话
+            </span>
+          }
+        >
           {info.phone || '未提供'}
         </Descriptions.Item>
-        <Descriptions.Item label={<span><EnvironmentOutlined /> 地址</span>}>
+        <Descriptions.Item
+          label={
+            <span>
+              <EnvironmentOutlined /> 地址
+            </span>
+          }
+        >
           {info.address || '未提供'}
         </Descriptions.Item>
       </Descriptions>
