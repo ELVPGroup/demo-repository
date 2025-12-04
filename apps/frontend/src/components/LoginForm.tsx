@@ -1,6 +1,7 @@
 import { Form, Input, Checkbox, Button, message } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { commonAxiosInstance } from '@/utils/axios';
 
 type LoginFieldType = {
   phone?: string;
@@ -20,35 +21,45 @@ export function LoginForm({ role }: LoginFormProps) {
   const handleLogin = async (values: LoginFieldType) => {
     try {
       setLoading(true);
-      // 暂时使用fetch，后续接入axios
-      const response = await fetch('/baseUrl/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: values.phone,
-          password: values.password,
-          side: role,
-        }),
+      
+      // 使用 axios 发送登录请求
+      const response = await commonAxiosInstance.post('/login', {
+        phone: values.phone,
+        password: values.password,
+        side: role,
       });
 
-      const data = await response.json();
+      const data = response.data.data;
 
-      if (!response.ok) {
-        message.error(data.message || '登录失败');
-        return;
-      }
-
-      message.success('登录成功');
-      // 保存 token
+      // 检查响应数据
       if (data.token) {
+        // 保存 token 到 localStorage
         localStorage.setItem('token', data.token);
+        
+        // 如果勾选了"7天内保持登录"，可以设置过期时间
+        if (values.remember) {
+          // 可以在这里添加额外的逻辑，比如设置 token 过期时间
+          localStorage.setItem('token_expires', String(Date.now() + 7 * 24 * 60 * 60 * 1000));
+        }
+        
+        message.success('登录成功');
+        // 跳转到对应的页面
+        navigate(`/${role}`);
+      } else {
+        message.error(data.message || '登录失败：未获取到 token');
       }
-      // 跳转到对应的页面
-      navigate(`/${role}`);
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '登录失败');
+    } catch (error: unknown) {
+      // 处理错误响应
+      let errorMessage = '登录失败，请重试';
+      
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        errorMessage = axiosError.response?.data?.message || errorMessage;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }

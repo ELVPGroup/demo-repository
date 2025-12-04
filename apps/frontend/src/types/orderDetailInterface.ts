@@ -7,13 +7,28 @@ export interface OrderProduct {
   amount: number;
 }
 
-// 地址信息
+// 地址信息（完整数据，包含后端返回的所有字段）
 export interface AddressInfo {
   addressInfoId: string;
   name: string;
   phone: string;
   address: string;
   location: [number, number];
+}
+
+// 创建地址的请求数据（前端只发送这三个字段）
+export interface CreateAddressRequest {
+  name: string;
+  phone: string;
+  address: string;
+}
+
+// 更新地址的请求数据（前端只发送这三个字段）
+export interface UpdateAddressRequest {
+  addressInfoId: string;
+  name: string;
+  phone: string;
+  address: string;
 }
 
 // 时间线
