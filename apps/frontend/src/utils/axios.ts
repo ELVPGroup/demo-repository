@@ -108,4 +108,4 @@ export const merchantAxiosInstance = createAxiosInstance(`${BASE_URL}/merchant`)
 export const commonAxiosInstance = createAxiosInstance(BASE_URL);
 
 // 如果需要客户端实例，可以这样添加：
-// export const clientAxiosInstance = createAxiosInstance(`${BASE_URL}/client`);
+export const clientAxiosInstance = createAxiosInstance(`${BASE_URL}/client`);

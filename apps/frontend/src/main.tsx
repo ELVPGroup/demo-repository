@@ -25,13 +25,20 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConfigProvider theme={themeTokens}>
       <BrowserRouter>
-        <Suspense fallback={<div className="flex h-screen items-center justify-center"> <Spin size="large" /></div>}>
+        <Suspense
+          fallback={
+            <div className="flex h-screen items-center justify-center">
+              {' '}
+              <Spin size="large" />
+            </div>
+          }
+        >
           <Routes>
             {/* 项目根目录，目前为示例页面 */}
             <Route index element={<App />} />
 
             {/* 商家端路由 */}
-            <Route path="/merchant" element={<MerchantLayout />} >
+            <Route path="/merchant" element={<MerchantLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="orders/list" element={<OrdersPage />} />
               <Route path="orders/:orderId" element={<MerchantOrderDetailPage />} />
@@ -39,7 +46,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="shipping/list" element={<ShippingPage />} />
             </Route>
             {/* 用户端路由 */}
-            <Route path="client" element={<ClientLayout />}>
+            <Route path="/client" element={<ClientLayout />}>
               <Route index element={<MyOrdersPage />} />
               <Route path="orders/:orderId" element={<ClientOrderDetailPage />} />
             </Route>

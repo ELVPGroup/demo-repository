@@ -24,18 +24,18 @@ export const TimeLine: React.FC<TimeLineProps> = ({
             {/* Node */}
             <div
               className={`relative z-10 mt-1.5 h-3 w-3 shrink-0 rounded-full border-2 ${
-                step.current
+                step.currentLocation
                   ? 'scale-125 border-blue-100 bg-blue-600 ring-4 ring-blue-50'
                   : 'border-white bg-gray-300'
               }`}
             ></div>
 
             {/* Content */}
-            <div className={`${step.current ? 'opacity-100' : 'opacity-70'}`}>
+            <div className={`${step.currentLocation ? 'opacity-100' : 'opacity-70'}`}>
               <div className="mb-1 flex items-center justify-between">
                 <span
                   className={`text-sm font-bold ${
-                    step.current ? 'text-blue-600' : 'text-gray-700'
+                    step.currentLocation ? 'text-blue-600' : 'text-gray-700'
                   }`}
                 >
                   {step.status}

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { merchantAxiosInstance } from '../utils/axios';
+import { merchantAxiosInstance, clientAxiosInstance } from '../utils/axios';
+import { useUserStore } from "./userStore";
 
 // 引入接口类型
 import type { OrderDetailResponse, OrderDetail } from '../types/orderDetailInterface';
@@ -26,16 +27,32 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
     set({ loading: true, error: null });
 
     try {
-      const res = await merchantAxiosInstance.get<OrderDetailResponse>(`/orders/detail/${orderId}`);
-      console.log(res.data.data);
+      const { side } = useUserStore.getState();
+      const axiosInstance = side === 'client' ? clientAxiosInstance : merchantAxiosInstance;
+      
+      const res = await axiosInstance.get<OrderDetailResponse>(`/orders/detail/${orderId}`);
+      const data = res.data.data as unknown as Record<string, unknown>;
+      const defaultAddr = {
+        addressInfoId: '',
+        name: '',
+        phone: '',
+        address: '',
+        location: [0, 0] as [number, number],
+      };
+      const normalized = {
+        ...(data as OrderDetail),
+        addressInfo:
+          (data['addressInfo'] as OrderDetail['addressInfo']) ??
+          (data['shippingTo'] as OrderDetail['addressInfo']) ??
+          defaultAddr,
+      } as OrderDetail;
 
       set({
-        order: res.data.data,
+        order: normalized,
         loading: false,
       });
-
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "获取订单失败";
+      const errorMessage = err instanceof Error ? err.message : '获取订单失败';
       set({
         loading: false,
         error: errorMessage,
@@ -52,9 +69,8 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
       set({
         loading: false,
       });
-
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "更新订单失败";
+      const errorMessage = err instanceof Error ? err.message : '更新订单失败';
       set({
         loading: false,
         error: errorMessage,
@@ -68,15 +84,31 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
 
     try {
       await merchantAxiosInstance.post(`/orders/${orderId}/ship`);
-      
+
       // 发货成功后重新获取订单详情
       const res = await merchantAxiosInstance.get<OrderDetailResponse>(`/orders/detail/${orderId}`);
+      const data = res.data.data as unknown as Record<string, unknown>;
+      const defaultAddr = {
+        addressInfoId: '',
+        name: '',
+        phone: '',
+        address: '',
+        location: [0, 0] as [number, number],
+      };
+      const normalized = {
+        ...(data as OrderDetail),
+        addressInfo:
+          (data['addressInfo'] as OrderDetail['addressInfo']) ??
+          (data['shippingTo'] as OrderDetail['addressInfo']) ??
+          defaultAddr,
+      } as OrderDetail;
+
       set({
-        order: res.data.data,
+        order: normalized,
         loading: false,
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "发货失败";
+      const errorMessage = err instanceof Error ? err.message : '发货失败';
       set({
         loading: false,
         error: errorMessage,
