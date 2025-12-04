@@ -97,7 +97,7 @@ class AMapClient {
    * @param origin 起点坐标（经度, 纬度）
    * @param destination 终点坐标（经度, 纬度）
    * @param strategy 策略（高德驾车策略编码，可选）
-   * @returns `distance`: 距离（米）、`duration`: 时长（秒）、`polyline`: 路径折线、`raw`: 原始响应
+   * @returns `distance`: 距离（米）、`distanceKm`: 距离（千米）、`duration`: 时长（秒）、`polyline`: 路径折线、`raw`: 原始响应
    */
   async directionDriving(origin: GeoPoint, destination: GeoPoint, strategy?: string) {
     const data = await this.request<DirectionDrivingResponse>('/v3/direction/driving', {
@@ -112,7 +112,13 @@ class AMapClient {
       .map((s) => s.polyline || '')
       .filter(Boolean)
       .join(';');
-    return { distance, duration, polyline: poly, raw: data };
+    return {
+      distance,
+      distanceKm: distance ? distance / 1000 : undefined,
+      duration,
+      polyline: poly,
+      raw: data,
+    };
   }
 }
 

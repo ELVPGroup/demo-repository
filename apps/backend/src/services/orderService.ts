@@ -217,7 +217,7 @@ export class OrderService {
         amount,
         totalPrice,
         ...(location ? { location } : {}),
-        ...(distance !== undefined ? { distance } : {}),
+        ...(distance !== undefined ? { distance, distanceKm: distance / 1000 } : {}),
         inRange,
         userName: order.user?.name ?? '',
       };
