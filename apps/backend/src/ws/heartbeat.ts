@@ -27,4 +27,12 @@ export function setupHeartbeat(ws: WebSocketWithAlive) {
     ws.isAlive = false;
     ws.ping();
   }, HEARTBEAT_INTERVAL);
+
+  ws.on('close', () => {
+    clearInterval(interval);
+  });
+
+  ws.on('error', () => {
+    clearInterval(interval);
+  });
 }
