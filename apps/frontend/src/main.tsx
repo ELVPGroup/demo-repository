@@ -20,18 +20,29 @@ const ClientOrderDetailPage = lazy(() => import('@/pages/client/OrderDetailPage.
 //为AntD配置样式
 import { ConfigProvider } from 'antd';
 import { themeTokens } from '@/theme/theme';
+import DemoWebSocketPage from './pages/demo/DemoWebSocketPage.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ConfigProvider theme={themeTokens}>
       <BrowserRouter>
-        <Suspense fallback={<div className="flex h-screen items-center justify-center"> <Spin size="large" /></div>}>
+        <Suspense
+          fallback={
+            <div className="flex h-screen items-center justify-center">
+              {' '}
+              <Spin size="large" />
+            </div>
+          }
+        >
           <Routes>
             {/* 项目根目录，目前为示例页面 */}
             <Route index element={<App />} />
 
+            {/* WebSocket 演示路由，用于开发演示 */}
+            <Route path="/demo/ws" element={<DemoWebSocketPage />} />
+
             {/* 商家端路由 */}
-            <Route path="/merchant" element={<MerchantLayout />} >
+            <Route path="/merchant" element={<MerchantLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="orders/list" element={<OrdersPage />} />
               <Route path="orders/:orderId" element={<MerchantOrderDetailPage />} />
