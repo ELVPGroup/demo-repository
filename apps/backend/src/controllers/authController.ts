@@ -1,5 +1,5 @@
 import type { Context } from 'koa';
-import { authService, type RequestSide } from '../services/authService.js';
+import { authService, type RequestSide } from '@/services/authService.js';
 
 /**
  * 认证控制器

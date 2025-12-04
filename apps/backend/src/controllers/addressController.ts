@@ -1,5 +1,6 @@
 import type { Context } from 'koa';
-import { addressService } from '../services/addressService.js';
+import { addressService } from '@/services/addressService.js';
+import { generateServiceId, parseServiceId, ServiceKey } from '@/utils/serverIdHandler.js';
 
 interface AddressItem {
   addressInfoId: number;
@@ -31,7 +32,7 @@ export class AddressController {
     const { addressInfoId, name, phone, address, longitude, latitude } = addressItem;
 
     return {
-      addressInfoId,
+      addressInfoId: generateServiceId(addressInfoId, ServiceKey.addressInfo),
       name,
       phone,
       address,
@@ -98,15 +99,23 @@ export class AddressController {
   async updateAddress(ctx: Context): Promise<void> {
     try {
       const { addressInfoId, name, phone, address } = ctx.request.body as {
-        addressInfoId?: number;
+        addressInfoId?: string;
         name?: string;
         phone?: string;
         address?: string;
       };
 
+      if (!addressInfoId) {
+        ctx.status = 400;
+        ctx.body = {
+          _message: '缺少地址信息ID',
+        };
+        return;
+      }
+
       await addressService.updateAddress({
         ...this.extractRoleId(ctx.state['user']),
-        addressInfoId: Number(addressInfoId),
+        addressInfoId: parseServiceId(addressInfoId).id,
         name: name as string,
         phone: phone as string,
         address: address as string,
@@ -135,7 +144,7 @@ export class AddressController {
 
       const result = await addressService.deleteAddress({
         ...this.extractRoleId(ctx.state['user']),
-        addressInfoId: Number(addressInfoId),
+        addressInfoId: parseServiceId(addressInfoId).id,
       });
 
       ctx.status = 200;

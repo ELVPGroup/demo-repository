@@ -1,7 +1,8 @@
-import { Form, Input, Checkbox, Button, message } from 'antd';
+import { Form, Input, Checkbox, Button } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { commonAxiosInstance } from '@/utils/axios';
+import { useUserStore } from '../store/userStore';
 
 type LoginFieldType = {
   phone?: string;
@@ -21,7 +22,7 @@ export function LoginForm({ role }: LoginFormProps) {
   const handleLogin = async (values: LoginFieldType) => {
     try {
       setLoading(true);
-      
+
       // 使用 axios 发送登录请求
       const response = await commonAxiosInstance.post('/login', {
         phone: values.phone,
@@ -29,37 +30,14 @@ export function LoginForm({ role }: LoginFormProps) {
         side: role,
       });
 
-      const data = response.data.data;
-
-      // 检查响应数据
-      if (data.token) {
-        // 保存 token 到 localStorage
-        localStorage.setItem('token', data.token);
-        
-        // 如果勾选了"7天内保持登录"，可以设置过期时间
-        if (values.remember) {
-          // 可以在这里添加额外的逻辑，比如设置 token 过期时间
-          localStorage.setItem('token_expires', String(Date.now() + 7 * 24 * 60 * 60 * 1000));
-        }
-        
-        message.success('登录成功');
-        // 跳转到对应的页面
-        navigate(`/${role}`);
-      } else {
-        message.error(data.message || '登录失败：未获取到 token');
+      const result = response.data;
+      if (!result || !result.data) {
+        return;
       }
-    } catch (error: unknown) {
-      // 处理错误响应
-      let errorMessage = '登录失败，请重试';
-      
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response?: { data?: { message?: string } } };
-        errorMessage = axiosError.response?.data?.message || errorMessage;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-      
-      message.error(errorMessage);
+      const { id, name, side, token } = result.data;
+      const remember = Boolean(values.remember);
+      useUserStore.getState().login({ id, name, side, token }, remember);
+      navigate(`/${side}`);
     } finally {
       setLoading(false);
     }

@@ -5,6 +5,9 @@ export enum ServiceKey {
   client = 'USER',
   merchant = 'MER',
   order = 'ORD',
+  product = 'PRO',
+  addressInfo = 'ADDR',
+  logisticsProvider = 'LOGI',
 }
 
 const MIN_ID_LENGTH = 6;
@@ -29,6 +32,7 @@ export function generateServiceId(rawId: number, key: ServiceKey) {
  * @returns key, id对象
  */
 export function parseServiceId(serviceId: string) {
+  console.log(`解析服务ID: ${serviceId}`);
   const [key, id] = serviceId.split('-');
   return { key: key as ServiceKey, id: Number(id) };
 }

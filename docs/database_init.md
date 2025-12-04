@@ -37,7 +37,9 @@ cp apps/backend/.env.example apps/backend/.env
 ```bash
 # 在项目根目录下
 cd apps/backend
-npx prisma migrate dev --name init
+npx prisma migrate dev
+# 如果网络不佳，使用
+PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma npx prisma migrate dev
 ```
 
 8. 初始化Prisma Client
@@ -53,3 +55,4 @@ npx prisma migrate dev --name update
 npx prisma generate
 ```
 
+**必须在完成此文档所有步骤后，才可构建、启动后端服务**

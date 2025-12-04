@@ -1,4 +1,6 @@
-import prisma from '../db.js';
+import { addressModel } from '@/models/addressModel.js';
+import { amapClient } from '@/amapClient.js';
+import type { Prisma } from 'generated/prisma/client.js';
 
 interface BaseAddressPayload {
   userId?: number;
@@ -40,27 +42,37 @@ export class AddressService {
    * 获取商家/用户的地址列表
    */
   async getAddressList(payload: BaseAddressPayload) {
-    const where = this.extractRoleId(payload);
-    const addressList = await prisma.addressInfo.findMany({ where: { ...where } });
+    const where = this.extractRoleId(payload) as Prisma.AddressInfoWhereInput;
+    const addressList = await addressModel.findMany({ ...where });
     return addressList;
+  }
+
+  /**
+   * 验证地址并创建带有坐标的地址对象
+   */
+  async geocodeAndBuildCreateData(payload: CreateAddressPayload) {
+    const roleId = this.extractRoleId(payload);
+    const geo = await amapClient.geocode(payload.address);
+    if (!geo.location) {
+      throw new Error('输入的地址无法解析坐标');
+    }
+    const [longitude, latitude] = geo.location;
+    return {
+      name: payload.name,
+      phone: payload.phone,
+      address: payload.address,
+      longitude,
+      latitude,
+      ...roleId,
+    };
   }
 
   /**
    * 添加地址
    */
   async createAddress(payload: CreateAddressPayload) {
-    const { name, phone, address } = payload;
-    const roleId = this.extractRoleId(payload);
-    const newAddress = await prisma.addressInfo.create({
-      data: {
-        name,
-        phone,
-        address,
-        longitude: 0,
-        latitude: 0,
-        ...roleId,
-      },
-    });
+    const data = await this.geocodeAndBuildCreateData(payload);
+    const newAddress = await addressModel.create(data);
     return newAddress;
   }
 
@@ -72,14 +84,21 @@ export class AddressService {
     const roleId = this.extractRoleId(payload);
 
     // 构建动态更新字段（只包含提供的字段）
-    const updateData: Record<string, string> = {};
+    const updateData: Prisma.AddressInfoUpdateInput = {};
     if (name) updateData['name'] = name;
     if (phone) updateData['phone'] = phone;
-    if (address) updateData['address'] = address;
+    if (address) {
+      updateData['address'] = address;
+      const geo = await amapClient.geocode(address);
+      if (!geo.location) {
+        throw new Error('输入的地址无法解析坐标');
+      }
+      const [longitude, latitude] = geo.location;
+      updateData['longitude'] = longitude;
+      updateData['latitude'] = latitude;
+    }
 
-    const existingAddress = await prisma.addressInfo.findUnique({
-      where: { addressInfoId },
-    });
+    const existingAddress = await addressModel.findById(addressInfoId);
     if (!existingAddress) {
       throw new Error('地址不存在');
     }
@@ -95,10 +114,7 @@ export class AddressService {
       throw new Error('没有更新该地址的权限');
     }
 
-    const updatedAddress = await prisma.addressInfo.update({
-      where: { addressInfoId },
-      data: updateData,
-    });
+    const updatedAddress = await addressModel.updateById(addressInfoId, updateData);
     return updatedAddress;
   }
 
@@ -109,9 +125,7 @@ export class AddressService {
     const { addressInfoId } = payload;
     const roleId = this.extractRoleId(payload);
 
-    const existingAddress = await prisma.addressInfo.findUnique({
-      where: { addressInfoId },
-    });
+    const existingAddress = await addressModel.findById(addressInfoId);
     if (!existingAddress) {
       throw new Error('地址不存在');
     }
@@ -124,9 +138,7 @@ export class AddressService {
       throw new Error('没有删除该地址的权限');
     }
 
-    const deletedAddress = await prisma.addressInfo.delete({
-      where: { addressInfoId: existingAddress.addressInfoId },
-    });
+    const deletedAddress = await addressModel.deleteById(existingAddress.addressInfoId);
     return deletedAddress;
   }
 }

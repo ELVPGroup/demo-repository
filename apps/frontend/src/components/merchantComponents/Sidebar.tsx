@@ -1,23 +1,23 @@
 import React from 'react';
-import { useNavigate, useLocation } from "react-router";
-import { Layout, Menu, Button } from "antd";
-import type { MenuProps } from "antd";
-import { Home, ClipboardList, Package, LogOut, MapPinHouse } from "lucide-react";
-import { Logo } from "./Logo";
+import { useNavigate, useLocation } from 'react-router';
+import { Layout, Menu, Button } from 'antd';
+import type { MenuProps } from 'antd';
+import { Home, ClipboardList, Package, LogOut, MapPinHouse } from 'lucide-react';
+import { Logo } from './Logo';
+import { useUserStore } from '@/store/userStore';
 
 const { Sider } = Layout;
 
 const Sidebar: React.FC = () => {
-  const base = "/merchant";
+  const base = '/merchant';
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogout = () => {
     // 清除本地存储的认证信息
-    localStorage.removeItem('token');
-    localStorage.removeItem('userInfo');
     sessionStorage.clear();
-    
+    useUserStore.getState().logout();
+
     // 跳转到首页
     navigate('/');
   };
@@ -77,12 +77,14 @@ const Sidebar: React.FC = () => {
         zIndex: 10,
       }}
     >
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        height: '100%', 
-        padding: '16px' 
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          padding: '16px',
+        }}
+      >
         {/* LOGO */}
         <div style={{ marginBottom: '32px' }}>
           <Logo />
