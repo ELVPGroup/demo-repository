@@ -1,7 +1,7 @@
 import { Form, Input, Checkbox, Button } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { apiAxiosInstance } from '../utils/axios';
+import { commonAxiosInstance } from '@/utils/axios';
 import { useUserStore } from '../store/userStore';
 
 type LoginFieldType = {
@@ -22,11 +22,14 @@ export function LoginForm({ role }: LoginFormProps) {
   const handleLogin = async (values: LoginFieldType) => {
     try {
       setLoading(true);
-      const response = await apiAxiosInstance.post('/login', {
+
+      // 使用 axios 发送登录请求
+      const response = await commonAxiosInstance.post('/login', {
         phone: values.phone,
         password: values.password,
         side: role,
       });
+
       const result = response.data;
       if (!result || !result.data) {
         return;

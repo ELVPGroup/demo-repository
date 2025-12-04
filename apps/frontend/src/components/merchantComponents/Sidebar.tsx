@@ -14,9 +14,7 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
 
   const handleLogout = () => {
-    // 清除本地存储的认证信息（如果有）
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userInfo');
+    // 清除本地存储的认证信息
     sessionStorage.clear();
     useUserStore.getState().logout();
 
@@ -62,7 +60,7 @@ const Sidebar: React.FC = () => {
       key: 'shipping',
       icon: <MapPinHouse size={20} />,
       label: '地址管理',
-      onClick: () => navigate(`${base}/shipping`),
+      onClick: () => navigate(`${base}/shipping/list`),
     },
   ];
 

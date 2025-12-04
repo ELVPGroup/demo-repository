@@ -36,7 +36,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="orders/list" element={<OrdersPage />} />
               <Route path="orders/:orderId" element={<MerchantOrderDetailPage />} />
               <Route path="delivery-management" element={<DeliveryManagementPage />} />
-              <Route path="shipping" element={<ShippingPage />} />
+              <Route path="shipping/list" element={<ShippingPage />} />
             </Route>
             {/* 用户端路由 */}
             <Route path="client" element={<ClientLayout />}>

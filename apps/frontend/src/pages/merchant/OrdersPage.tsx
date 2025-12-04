@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pagination } from 'antd';
+import { Pagination, Spin } from 'antd';
 import Sidebar from '@/components/merchantComponents/Sidebar';
 import { TopBar } from '@/components/merchantComponents/TopBar';
 import { SearchBar } from '@/components/merchantComponents/SearchBar';
@@ -76,9 +76,13 @@ const OrdersPage: React.FC = () => {
         />
 
         {/* Orders Grid */}
-        {loading ? (
-          <div className="mt-6 text-center" style={{ color: 'var(--color-text-secondary)' }}>
-            加载中...
+        {loading && orders.length === 0 ? (
+            <div className="h-100 mt-6 flex justify-center items-center">
+              <Spin size="large" />
+            </div>
+        ) : orders.length === 0 ? (
+          <div className="h-100 flex justify-center items-center mt-6 text-center" style={{ color: 'var(--color-text-secondary)' }}>
+            暂无订单数据
           </div>
         ) : (
           <CardGrid />
@@ -101,12 +105,6 @@ const OrdersPage: React.FC = () => {
           </div>
         )}
 
-        {/* 无数据提示 */}
-        {!loading && orders.length === 0 && (
-          <div className="mt-6 text-center" style={{ color: 'var(--color-text-secondary)' }}>
-            暂无订单数据
-          </div>
-        )}
       </main>
     </div>
   );
