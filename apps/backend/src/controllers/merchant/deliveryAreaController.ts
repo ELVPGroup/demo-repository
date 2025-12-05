@@ -9,7 +9,10 @@ export class MerchantDeliveryAreaController {
       const result = await deliveryAreaService.get(merchantId);
       ctx.status = 200;
       ctx.body = result
-        ? { _data: result, _message: '获取配送范围成功' }
+        ? {
+            _data: { center: result.center, radius: result.radiusKm },
+            _message: '获取配送范围成功',
+          }
         : { _message: '商家未设置配送范围' };
     } catch (error) {
       ctx.status = 400;
@@ -27,7 +30,7 @@ export class MerchantDeliveryAreaController {
       }
       const lon = Number(center[0]);
       const lat = Number(center[1]);
-      const r = Number(radius);
+      const r = Number(radius) * 1000;
       if (Number.isNaN(lon) || Number.isNaN(lat) || Number.isNaN(r)) {
         ctx.status = 400;
         ctx.body = { _message: '坐标或半径无效' };
@@ -40,7 +43,13 @@ export class MerchantDeliveryAreaController {
         radius: r,
       });
       ctx.status = 200;
-      ctx.body = { _data: result, _message: '设置配送范围成功' };
+      ctx.body = {
+        _data: {
+          center: result.center,
+          radius: result.radiusKm,
+        },
+        _message: '设置配送范围成功',
+      };
     } catch (error) {
       ctx.status = 400;
       ctx.body = { _message: error instanceof Error ? error.message : '设置配送范围失败' };
