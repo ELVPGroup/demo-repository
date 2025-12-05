@@ -3,7 +3,7 @@ import { Select, Button } from 'antd';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 
 type Status = 'all' | 'pending' | 'done';
-type SortBy = 'time' | 'amount' | 'id';
+type SortBy = 'createdAt' | 'amount' | 'id';
 type SortOrder = 'asc' | 'desc';
 
 interface StatusFilterProps {
@@ -33,14 +33,14 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
           value={sortBy}
           onChange={(value) => setSortBy?.(value as SortBy)}
           options={[
-            { value: 'time', label: <span>按时间</span> },
-            { value: 'amount', label: <span>按金额</span> },
-            { value: 'id', label: <span>按订单号</span> },
+            { value: 'createdAt', label: <span>按时间</span> },
+            { value: 'totalPrice', label: <span>按金额</span> },
+            { value: 'orderId', label: <span>按订单号</span> },
           ]}
         />
         <Button
           style={{ width: 64, height: 32, fontSize: 14 }}
-          type={sort === 'asc' ? "default" : "primary"}
+          type={sort === 'asc' ? 'default' : 'primary'}
           icon={sort === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
           onClick={() => setSort?.(sort === 'asc' ? 'desc' : 'asc')}
         >

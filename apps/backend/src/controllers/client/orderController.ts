@@ -2,17 +2,9 @@ import type { Context } from 'koa';
 import { orderService } from '@/services/orderService.js';
 import { extractRoleId } from '@/utils/roleHandler.js';
 import { type SortParams, type PaginationParams } from '@/types/index.js';
-import type { OrderStatus } from '@/types/order.js';
+import type { ClientOrderListFilterParams, ClientOrderListParams } from '@/types/order.js';
 import { parseServiceId } from '@/utils/serverIdHandler.js';
-
-type UserOrderListParams = {
-  userId: number;
-} & Partial<SortParams & PaginationParams>;
-
-type FilterParams = {
-  status?: OrderStatus;
-  customerName?: string;
-};
+import { getTruthyKeyValues } from '@/utils/general.js';
 
 /**
  * 用户端订单控制器
@@ -23,18 +15,18 @@ export class UserOrderController {
    */
   async getOrderList(ctx: Context): Promise<void> {
     try {
-      const { sort, sortBy, offset, limit, ...filterParams } = ctx.request.body as SortParams &
-        PaginationParams &
-        FilterParams;
+      const { sort, sortBy, offset, limit, orderId, ...filterParams } = ctx.request
+        .body as SortParams & PaginationParams & ClientOrderListFilterParams;
 
-      const params: UserOrderListParams = {
+      const params: ClientOrderListParams = {
         ...(extractRoleId(ctx.state['user']) as { userId: number }),
         // 添加可选排序参数
         ...(sort && sortBy ? { sort, sortBy } : {}),
         // 添加可选分页参数
         ...(offset !== undefined && limit !== undefined ? { offset, limit } : {}),
         // 加入可选筛选参数
-        ...filterParams,
+        ...(orderId !== undefined ? { orderId: parseServiceId(orderId).id } : {}),
+        ...getTruthyKeyValues(filterParams),
       };
 
       const result = await orderService.getOrderList(params);

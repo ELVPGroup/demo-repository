@@ -9,6 +9,7 @@ import { amapClient } from '@/amapClient.js';
 import { broadcastOrderShipping } from '@/ws/orderSubscriptions.js';
 import prisma from '@/db.js';
 import { getDictName, shippingStatusDict } from '@/utils/dicts.js';
+import dayjs from 'dayjs';
 
 interface SimulationConfig {
   speedKmh: number;
@@ -154,7 +155,7 @@ export class LogisticsService {
           event.progress <= 0 ? 'PACKING' : event.progress < 1 ? 'SHIPPED' : 'DELIVERED';
         broadcastOrderShipping(orderId, {
           location: event.point,
-          timestamp: new Date(now).toISOString(),
+          timestamp: dayjs(now).format('YYYY-MM-DD HH:mm:ss'),
           status: getDictName(status as keyof typeof shippingStatusDict, shippingStatusDict),
           progress: event.progress,
         });

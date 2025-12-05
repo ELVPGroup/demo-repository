@@ -12,16 +12,18 @@ const ITEMS_PER_PAGE = 9;
 const OrdersPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'all' | 'pending' | 'done'>('all');
-  const [sortBy, setSortBy] = useState<'time' | 'amount' | 'id'>('time');
+  const [sortBy, setSortBy] = useState<'createdAt' | 'amount' | 'id'>('createdAt');
   const [sort, setSort] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
 
   const { orders, total, loading, setParams, fetchOrders } = useOrderStore();
 
   // 将 StatusFilter 的 sortBy 值映射到 API 期望的值
-  const mapSortByToApi = (value: 'time' | 'amount' | 'id'): 'createdAt' | 'totalPrice' | 'orderId' => {
+  const mapSortByToApi = (
+    value: 'createdAt' | 'amount' | 'id'
+  ): 'createdAt' | 'totalPrice' | 'orderId' => {
     const mapping = {
-      time: 'createdAt',
+      createdAt: 'createdAt',
       amount: 'totalPrice',
       id: 'orderId',
     } as const;
@@ -56,15 +58,10 @@ const OrdersPage: React.FC = () => {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-layout)' }}>
-
       <main className="ml-60 flex-1 px-10 py-6">
         <TopBar title="订单管理" />
 
-        <SearchBar
-          value={search}
-          onChange={setSearch}
-          onSearch={handleSearch}
-        />
+        <SearchBar value={search} onChange={setSearch} onSearch={handleSearch} />
 
         <StatusFilter
           status={status}
@@ -77,11 +74,14 @@ const OrdersPage: React.FC = () => {
 
         {/* Orders Grid */}
         {loading && orders.length === 0 ? (
-            <div className="h-100 mt-6 flex justify-center items-center">
-              <Spin size="large" />
-            </div>
+          <div className="mt-6 flex h-100 items-center justify-center">
+            <Spin size="large" />
+          </div>
         ) : orders.length === 0 ? (
-          <div className="h-100 flex justify-center items-center mt-6 text-center" style={{ color: 'var(--color-text-secondary)' }}>
+          <div
+            className="mt-6 flex h-100 items-center justify-center text-center"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
             暂无订单数据
           </div>
         ) : (
@@ -97,14 +97,11 @@ const OrdersPage: React.FC = () => {
               pageSize={ITEMS_PER_PAGE}
               showSizeChanger={false}
               showQuickJumper
-              showTotal={(total, range) =>
-                `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
-              }
+              showTotal={(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`}
               onChange={handlePageChange}
             />
           </div>
         )}
-
       </main>
     </div>
   );

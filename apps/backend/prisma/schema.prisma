@@ -97,10 +97,11 @@ model Product {
 
 model Order {
   // INTEGER - 🔑 PK, not null, unique, autoincrement
-  orderId   Int         @id @default(autoincrement()) @map("orderId")
-  status    OrderStatus @default(PENDING)
+  orderId    Int         @id @default(autoincrement()) @map("orderId")
+  status     OrderStatus @default(PENDING)
   // TIMESTAMPTZ
-  createdAt DateTime    @default(now()) @db.Timestamptz(6)
+  createdAt  DateTime    @default(now()) @db.Timestamptz(6)
+  totalPrice Decimal     @default(0) @db.Decimal(10, 2)
 
   // Foreign Keys
   userId     Int?         @map("userId")
