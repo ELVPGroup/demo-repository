@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
 
 import { useOrderDetailStore } from '@/store/useOrderDetailStore';
+import RouteMap from '@/components/RouteMap'; // 导入RouteMap组件
 
 const OrderDetailPage = () => {
   const { orderId } = useParams();
@@ -40,6 +41,24 @@ const OrderDetailPage = () => {
       });
     }
   }, [editVisible, order, form]);
+
+  // 根据订单状态和发货状态确定当前位置
+  const getCurrentLocation = () => {
+    if (!order) return null;
+
+    // 如果订单已送达，使用收货地址作为当前位置
+    if (order.status === '已签收' || order.status === 'delivered') {
+      return order.shippingTo?.location || order.addressInfo?.location;
+    }
+
+    // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
+    if (order.status === '运输中' || order.status === '已发货') {
+      return order.shippingFrom?.location || order.addressInfo?.location;
+    }
+
+    // 默认使用发货地址
+    return order.shippingFrom?.location || order.addressInfo?.location;
+  };
 
   const handleSave = async () => {
     try {
@@ -82,10 +101,11 @@ const OrderDetailPage = () => {
 
   // 判断是否可以发货（待处理或已确认状态）
   const canShip = order && order.shippingStatus === '待发货';
-  console.log(canShip);
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Sidebar />
+
       {/* 编辑订单信息模态框 */}
       <Modal
         title="编辑订单信息"
@@ -349,17 +369,74 @@ const OrderDetailPage = () => {
                 </div>
               </div>
 
-              {/* 配送轨迹 */}
+              {/* 配送轨迹 - 替换为RouteMap组件 */}
               <div className="rounded-xl bg-white p-6 shadow-sm">
                 <div className="mb-4 flex items-center gap-2">
                   <Truck className="h-5 w-5 text-blue-500" />
                   <h2 className="text-xl font-semibold">配送轨迹</h2>
                 </div>
-                <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 bg-gray-50">
-                  <div className="text-center">
-                    <MapPin className="mx-auto h-12 w-12 text-gray-400" />
-                    <p className="mt-2 text-gray-500">配送轨迹地图占位</p>
-                  </div>
+                <div className="h-96 overflow-hidden rounded-lg border border-gray-200">
+                  {/* 判断是否有发货地址和收货地址 */}
+                  {order.shippingFrom?.address && order.shippingTo?.address ? (
+                    <RouteMap
+                      startLocation={{
+                        name: order.shippingFrom.address,
+                        coords: order.shippingFrom.location || [114.305539, 30.593175], // 默认武汉坐标
+                      }}
+                      endLocation={{
+                        name: order.shippingTo.address,
+                        coords: order.shippingTo.location || [114.872389, 30.453667], // 默认黄冈坐标
+                      }}
+                      status={order.status}
+                      currentLocation={getCurrentLocation()}
+                      showControls={true}
+                      showInfoCard={true}
+                      showProgressIndicator={true}
+                      className="h-full"
+                      onMapClick={(coords) => {
+                        console.log('地图点击坐标:', coords);
+                      }}
+                      onZoomChange={(zoom) => {
+                        console.log('地图缩放级别:', zoom);
+                      }}
+                    />
+                  ) : order.addressInfo?.address ? (
+                    // 如果没有发货地址，但有一个收货地址，可以显示从默认位置到收货地址的路线
+                    <RouteMap
+                      startLocation={{
+                        name: '发货仓库',
+                        coords: [114.305539, 30.593175], // 默认发货坐标
+                      }}
+                      endLocation={{
+                        name: order.addressInfo.address,
+                        coords: order.addressInfo.location || [114.872389, 30.453667],
+                      }}
+                      currentLocation={getCurrentLocation()}
+                      showControls={true}
+                      showInfoCard={true}
+                      showProgressIndicator={true}
+                      className="h-full"
+                    />
+                  ) : (
+                    // 如果没有任何地址信息，显示提示
+                    <div className="flex h-full items-center justify-center">
+                      <div className="text-center">
+                        <MapPin className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="mt-2 text-gray-500">暂无配送地址信息</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 text-sm text-gray-500">
+                  {order.status === '待发货'
+                    ? '等待发货'
+                    : order.status === '已揽收'
+                      ? '包裹已发出，正在运输中'
+                      : order.status === '运输中'
+                        ? '包裹正在运输途中'
+                        : order.status === '已签收'
+                          ? '包裹已送达'
+                          : '配送状态未知'}
                 </div>
               </div>
             </div>
@@ -406,6 +483,24 @@ const OrderDetailPage = () => {
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">发货状态</span>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        order.shippingStatus === '待发货'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : order.shippingStatus === '已揽收'
+                            ? 'bg-blue-100 text-blue-700'
+                            : order.shippingStatus === '运输中'
+                              ? 'bg-blue-100 text-blue-700'
+                              : order.shippingStatus === '已签收'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {order.shippingStatus || '未知'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">用户名称</span>
                     <span className="font-medium text-gray-900">{order.userName || '-'}</span>
                   </div>
@@ -416,44 +511,83 @@ const OrderDetailPage = () => {
                 </div>
               </div>
 
-              {/* 收件人信息 */}
+              {/* 发货地址和收货地址信息 */}
               <div className="rounded-xl bg-white p-6 shadow-sm">
                 <div className="mb-4 flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-blue-500" />
-                  <h2 className="text-xl font-semibold">收件人信息</h2>
+                  <h2 className="text-xl font-semibold">配送地址</h2>
                 </div>
-                <div className="space-y-3">
-                  {order.addressInfo ? (
-                    <>
-                      <div>
-                        <div className="text-sm text-gray-500">姓名</div>
-                        <div className="mt-1 font-medium text-gray-900">
-                          {order.addressInfo.name || '-'}
+                <div className="space-y-4">
+                  {/* 发货地址 */}
+                  {order.shippingFrom && (
+                    <div>
+                      <div className="mb-2 text-sm font-medium text-gray-700">发货地址</div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-900">
+                          {order.shippingFrom.address || '-'}
                         </div>
+                        {order.shippingFrom.location && (
+                          <div className="text-xs text-gray-500">
+                            坐标: [{order.shippingFrom.location[0]?.toFixed(6)},{' '}
+                            {order.shippingFrom.location[1]?.toFixed(6)}]
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <div className="text-sm text-gray-500">联系电话</div>
-                        <div className="mt-1 font-medium text-gray-900">
-                          {order.addressInfo.phone || '-'}
+                    </div>
+                  )}
+
+                  {/* 收货地址 */}
+                  {order.shippingTo && (
+                    <div>
+                      <div className="mb-2 text-sm font-medium text-gray-700">收货地址</div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-gray-900">
+                          {order.shippingTo.address || '-'}
                         </div>
+                        {order.shippingTo.location && (
+                          <div className="text-xs text-gray-500">
+                            坐标: [{order.shippingTo.location[0]?.toFixed(6)},{' '}
+                            {order.shippingTo.location[1]?.toFixed(6)}]
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <div className="text-sm text-gray-500">地址</div>
-                        <div className="mt-1 font-medium text-gray-900">
-                          {order.addressInfo.address || '-'}
-                        </div>
-                      </div>
-                      {order.addressInfo.location && (
+                    </div>
+                  )}
+
+                  {/* 如果没有独立的发货/收货地址，显示收件人信息 */}
+                  {!order.shippingFrom && !order.shippingTo && order.addressInfo && (
+                    <div>
+                      <div className="mb-2 text-sm font-medium text-gray-700">收件人信息</div>
+                      <div className="space-y-3">
                         <div>
-                          <div className="text-sm text-gray-500">位置坐标</div>
+                          <div className="text-sm text-gray-500">姓名</div>
                           <div className="mt-1 font-medium text-gray-900">
-                            [{order.addressInfo.location[0]}, {order.addressInfo.location[1]}]
+                            {order.addressInfo.name || '-'}
                           </div>
                         </div>
-                      )}
-                    </>
-                  ) : (
-                    <div className="py-4 text-center text-gray-500">暂无收件人信息</div>
+                        <div>
+                          <div className="text-sm text-gray-500">联系电话</div>
+                          <div className="mt-1 font-medium text-gray-900">
+                            {order.addressInfo.phone || '-'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-sm text-gray-500">地址</div>
+                          <div className="mt-1 font-medium text-gray-900">
+                            {order.addressInfo.address || '-'}
+                          </div>
+                        </div>
+                        {order.addressInfo.location && (
+                          <div>
+                            <div className="text-sm text-gray-500">位置坐标</div>
+                            <div className="mt-1 font-medium text-gray-900">
+                              [{order.addressInfo.location[0]?.toFixed(6)},{' '}
+                              {order.addressInfo.location[1]?.toFixed(6)}]
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>

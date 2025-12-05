@@ -20,6 +20,7 @@ const ClientOrderDetailPage = lazy(() => import('@/pages/client/OrderDetailPage.
 //为AntD配置样式
 import { ConfigProvider } from 'antd';
 import { themeTokens } from '@/theme/theme';
+import DemoWebSocketPage from './pages/demo/DemoWebSocketPage.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -36,6 +37,9 @@ createRoot(document.getElementById('root')!).render(
           <Routes>
             {/* 项目根目录，目前为示例页面 */}
             <Route index element={<App />} />
+
+            {/* WebSocket 演示路由，用于开发演示 */}
+            <Route path="/demo/ws" element={<DemoWebSocketPage />} />
 
             {/* 商家端路由 */}
             <Route path="/merchant" element={<MerchantLayout />}>

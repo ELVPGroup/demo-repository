@@ -14,20 +14,27 @@ export function initWebSocket(server: Server) {
   // 响应 WebSocket 升级请求
   server.on('upgrade', async (req: IncomingMessage & { user?: jwt.JwtPayload }, socket, head) => {
     try {
-      const auth = req.headers['authorization'];
-
-      if (!auth || !auth.startsWith('Bearer ')) {
+      const protocols = req.headers['sec-websocket-protocol'];
+      if (!protocols) {
         throw new Error('Missing or invalid Authorization header');
       }
-      // 提取 token
-      const token = auth.replace('Bearer ', '').trim();
+      const [, token] = protocols.split(',').map((v) => v.trim());
+      // 验证 token
+      if (!token) {
+        throw new Error('Missing or invalid token');
+      }
       const decoded = authService.verifyToken(token);
       // 将用户信息附加到 req 上
       req.user = decoded;
 
-      wss.handleUpgrade(req, socket, head, (ws: WebSocket) => {
-        wss.emit('connection', ws, req);
-      });
+      if (req.url && req.url.startsWith('/ws')) {
+        wss.handleUpgrade(req, socket, head, (ws: WebSocket) => {
+          wss.emit('connection', ws, req);
+        });
+      } else {
+        // 非 /ws 路径，拒绝 WebSocket 升级
+        socket.destroy();
+      }
     } catch (error) {
       console.error('WebSocket upgrade error:', error);
       socket.destroy();
