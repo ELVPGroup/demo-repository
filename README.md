@@ -1,43 +1,115 @@
-# Demo Frontend Client
+# 电商物流配送可视化平台 ELVP 前后端单仓（Monorepo）
 
-这是一个前端演示项目的客户端代码库。
+这是一个包含前端与后端的单仓项目，用于电商物流可视化与订单追踪。仓库采用 pnpm Workspace 管理，目录下包含：
 
 ## 项目结构
 
 ```
-├── package.json       # 项目配置和依赖管理
-├── README.md          # 项目说明文档
-├── .gitignore         # Git忽略文件配置
-├── public/            # 静态资源目录
-│   └── index.html     # HTML入口文件
-└── src/               # 源代码目录
-    ├── components/    # 组件目录
-    ├── styles/        # 样式文件目录
-    └── index.js       # JavaScript入口文件
+├── apps/
+│   ├── backend/        # Koa + Prisma + PostgreSQL + WebSocket
+│   └── frontend/       # React + TypeScript + Vite
+├── docs/               # 开发与数据库文档
+├── package.json        # 根级脚本与工具配置
+├── pnpm-workspace.yaml # Workspace 配置
+└── README.md
 ```
 
-## 开发说明
+前端技术栈：React 19、TypeScript、Vite、Ant Design、Tailwind
+后端技术栈：Koa、Prisma、PostgreSQL、JWT、WebSocket
 
-### 安装依赖
+## 环境要求
+
+- Node.js 22+
+- pnpm（`pnpm@10.11.0`）
+- PostgreSQL（本地开发建议 15+）
+
+## 安装依赖
 
 ```bash
-npm install
+pnpm install
 ```
 
-### 运行项目
+## 后端配置与数据库初始化
 
-目前项目使用纯静态方式运行，可以直接在浏览器中打开 `public/index.html` 文件。
+1. 在 `apps/backend` 目录下创建环境文件：
+   - 复制 `apps/backend/.env.example` 为 `.env`
+   - 根据实际情况修改 `DATABASE_URL`、`JWT_SECRET`、`PORT`、`AMAP_API_KEY`
 
-未来可以根据需要添加构建工具（如Webpack、Vite等）。
+2. 生成 Prisma Client：
+   ```bash
+   pnpm --filter @elvp/backend prisma generate
+   ```
 
-## Git仓库信息
+3. 初始化/迁移数据库（本地开发）：
+   ```bash
+   pnpm --filter @elvp/backend prisma migrate dev
+   ```
+   如在部署环境使用既有迁移，可改用：
+   ```bash
+   pnpm --filter @elvp/backend prisma migrate deploy
+   ```
 
-本项目计划关联到以下GitHub仓库：
+后端默认监听端口 `3000`（可在 `.env` 中通过 `PORT` 配置）。健康检查接口：`GET /health`。
+
+## 启动开发环境
+
+- 启动后端（HTTP + WebSocket）：
+  ```bash
+  pnpm dev:server
+  ```
+  启动后访问 `http://localhost:3000`，WebSocket 默认 `ws://localhost:3000/ws`。
+
+- 启动前端（Vite Dev Server）：
+  ```bash
+  pnpm dev:web
+  ```
+  默认访问 `http://localhost:5173`。
+
+## 前端 API/WS 地址说明
+
+- REST API 基础地址当前在 `apps/frontend/src/utils/axios.ts` 中修改。本地开发修改为：
+  ```ts
+  // apps/frontend/src/utils/axios.ts
+  const BASE_URL = 'http://localhost:3000/api';
+  ```
+
+- WebSocket 基础地址定义在 `apps/frontend/src/config/index.ts`（行 1）：
+  ```ts
+  export const BASE_WS_URL = 'ws://localhost:3000/ws';
+  ```
+
+后端所有 REST 路由均以 `/api` 为前缀，例如：
+- 认证：`POST /api/login`、`GET /api/profile`
+- 商家订单：`POST /api/merchant/orders/list`、`GET /api/merchant/orders/detail/:orderId`
+
+## 构建与预览
+
+- 构建后端并运行：
+  ```bash
+  pnpm build:server
+  pnpm serve
+  ```
+
+- 构建前端并预览：
+  ```bash
+  pnpm build:web
+  pnpm preview:web
+  ```
+
+## 质量保障与提交规范
+
+- 代码检查：`pnpm lint`、自动修复：`pnpm lint:fix`
+- 格式化：`pnpm format`、检查：`pnpm format:check`
+- Husky 与 Commitlint 已配置，建议遵循约定式提交规范
+
+## Git 仓库信息
+
+本项目关联到以下 GitHub 仓库：
 - 主要仓库：https://github.com/ELVPGroup/demo-repository.git
-- 备用仓库：https://github.com/kevinaa76/demo-repository-fe-client.git
 
 ## 注意事项
 
-- 确保已正确配置Git代理设置以访问GitHub
-- 开发时请遵循标准的前端开发规范
-- 定期提交代码到远程仓库
+- 需要可用的 PostgreSQL 数据库并正确配置连接字符串
+- 如果在本地开发，请将前端的 `BASE_URL` 指向本地后端地址
+- 访问 GitHub 需确保网络代理设置正确
+- 提交代码前请运行检查与格式化脚本
