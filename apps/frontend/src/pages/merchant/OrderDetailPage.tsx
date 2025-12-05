@@ -45,17 +45,17 @@ const OrderDetailPage = () => {
   // 根据订单状态和发货状态确定当前位置
   const getCurrentLocation = () => {
     if (!order) return null;
-    
+
     // 如果订单已送达，使用收货地址作为当前位置
     if (order.status === '已签收' || order.status === 'delivered') {
       return order.shippingTo?.location || order.addressInfo?.location;
     }
-    
+
     // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
     if (order.status === '运输中' || order.status === '已发货') {
       return order.shippingFrom?.location || order.addressInfo?.location;
     }
-    
+
     // 默认使用发货地址
     return order.shippingFrom?.location || order.addressInfo?.location;
   };
@@ -63,7 +63,7 @@ const OrderDetailPage = () => {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
-      
+
       if (!order) return;
 
       const updatedOrder = {
@@ -90,7 +90,7 @@ const OrderDetailPage = () => {
 
   const handleShipOrder = async () => {
     if (!orderId) return;
-    
+
     try {
       await shipOrder(orderId);
       message.success('订单发货成功');
@@ -100,7 +100,7 @@ const OrderDetailPage = () => {
   };
 
   // 判断是否可以发货（待处理或已确认状态）
-  const canShip = order && (order.shippingStatus === '待发货');
+  const canShip = order && order.shippingStatus === '待发货';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -123,11 +123,19 @@ const OrderDetailPage = () => {
         <Form form={form} layout="vertical" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           {/* 订单金额信息 */}
           <Card size="small" title="订单金额" style={{ marginBottom: 16 }}>
-            <Form.Item label="数量" name="amount" rules={[{ required: true, message: '请输入数量' }]}>
+            <Form.Item
+              label="数量"
+              name="amount"
+              rules={[{ required: true, message: '请输入数量' }]}
+            >
               <InputNumber min={0} style={{ width: '100%' }} />
             </Form.Item>
 
-            <Form.Item label="总价" name="totalPrice" rules={[{ required: true, message: '请输入总价' }]}>
+            <Form.Item
+              label="总价"
+              name="totalPrice"
+              rules={[{ required: true, message: '请输入总价' }]}
+            >
               <InputNumber min={0} precision={2} style={{ width: '100%' }} prefix="¥" />
             </Form.Item>
           </Card>
@@ -138,25 +146,45 @@ const OrderDetailPage = () => {
               <Input placeholder="地址信息ID" />
             </Form.Item>
 
-            <Form.Item label="收件人姓名" name="name" rules={[{ required: true, message: '请输入收件人姓名' }]}>
+            <Form.Item
+              label="收件人姓名"
+              name="name"
+              rules={[{ required: true, message: '请输入收件人姓名' }]}
+            >
               <Input placeholder="收件人姓名" />
             </Form.Item>
 
-            <Form.Item label="联系电话" name="phone" rules={[{ required: true, message: '请输入联系电话' }]}>
+            <Form.Item
+              label="联系电话"
+              name="phone"
+              rules={[{ required: true, message: '请输入联系电话' }]}
+            >
               <Input placeholder="联系电话" />
             </Form.Item>
 
-            <Form.Item label="详细地址" name="address" rules={[{ required: true, message: '请输入详细地址' }]}>
+            <Form.Item
+              label="详细地址"
+              name="address"
+              rules={[{ required: true, message: '请输入详细地址' }]}
+            >
               <Input.TextArea rows={2} placeholder="详细地址" />
             </Form.Item>
 
             <Form.Item label="位置坐标" required>
               <Space>
-                <Form.Item name={['location', 0]} rules={[{ required: true, message: '请输入经度' }]} noStyle>
+                <Form.Item
+                  name={['location', 0]}
+                  rules={[{ required: true, message: '请输入经度' }]}
+                  noStyle
+                >
                   <InputNumber placeholder="经度" style={{ width: 150 }} />
                 </Form.Item>
                 <span>，</span>
-                <Form.Item name={['location', 1]} rules={[{ required: true, message: '请输入纬度' }]} noStyle>
+                <Form.Item
+                  name={['location', 1]}
+                  rules={[{ required: true, message: '请输入纬度' }]}
+                  noStyle
+                >
                   <InputNumber placeholder="纬度" style={{ width: 150 }} />
                 </Form.Item>
               </Space>
@@ -202,11 +230,7 @@ const OrderDetailPage = () => {
                         <Input placeholder="商品名称" />
                       </Form.Item>
 
-                      <Form.Item
-                        {...restField}
-                        name={[name, 'description']}
-                        label="商品描述"
-                      >
+                      <Form.Item {...restField} name={[name, 'description']} label="商品描述">
                         <Input.TextArea rows={2} placeholder="商品描述" />
                       </Form.Item>
 
@@ -218,7 +242,13 @@ const OrderDetailPage = () => {
                           rules={[{ required: true, message: '请输入单价' }]}
                           style={{ flex: 1 }}
                         >
-                          <InputNumber min={0} precision={2} style={{ width: '100%' }} prefix="¥" placeholder="单价" />
+                          <InputNumber
+                            min={0}
+                            precision={2}
+                            style={{ width: '100%' }}
+                            prefix="¥"
+                            placeholder="单价"
+                          />
                         </Form.Item>
 
                         <Form.Item
@@ -246,33 +276,22 @@ const OrderDetailPage = () => {
       </Modal>
 
       {/* 错误提示 */}
-      {error && (
-        <Alert
-          title="Error"
-          description={error}
-          type="error"
-          showIcon
-        />
-      )}
+      {error && <Alert title="Error" description={error} type="error" showIcon />}
 
       <main className="ml-60 px-10 py-6">
-        <div className='flex flex-row gap-4 justify-between'>
+        <div className="flex flex-row justify-between gap-4">
           <TopBar title={`订单详情 - ${orderId || ''}`} />
 
-          <div className='flex flex-row gap-4'>
-
+          <div className="flex flex-row gap-4">
             {/* 返回订单列表按钮 */}
-            <Button
-              onClick={() => navigate('/merchant/orders/list')}
-              color='primary'
-            >
+            <Button onClick={() => navigate('/merchant/orders/list')} color="primary">
               <ArrowLeft size={18} />
               <span>返回订单列表</span>
             </Button>
 
             {/* 编辑按钮 */}
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               onClick={() => setEditVisible(true)}
               disabled={!order || loading}
             >
@@ -281,7 +300,7 @@ const OrderDetailPage = () => {
 
             {/* 模拟发货按钮 */}
             {canShip && (
-              <Button 
+              <Button
                 type="primary"
                 danger
                 icon={<Truck size={18} />}
@@ -317,24 +336,35 @@ const OrderDetailPage = () => {
                   {order.products && order.products.length > 0 ? (
                     <>
                       {order.products.map((product, index) => (
-                        <div key={product.productId || index} className="flex items-center justify-between border-b border-gray-100 pb-4">
+                        <div
+                          key={product.productId || index}
+                          className="flex items-center justify-between border-b border-gray-100 pb-4"
+                        >
                           <div className="flex-1">
                             <div className="font-medium text-gray-900">{product.name}</div>
                             {product.description && (
-                              <div className="mt-1 text-sm text-gray-500">{product.description}</div>
+                              <div className="mt-1 text-sm text-gray-500">
+                                {product.description}
+                              </div>
                             )}
-                            <div className="mt-1 text-sm text-gray-500">数量：x{product.amount}</div>
+                            <div className="mt-1 text-sm text-gray-500">
+                              数量：x{product.amount}
+                            </div>
                           </div>
-                          <div className="text-lg font-semibold text-gray-900">¥{product.price.toFixed(2)}</div>
+                          <div className="text-lg font-semibold text-gray-900">
+                            ¥{product.price.toFixed(2)}
+                          </div>
                         </div>
                       ))}
                       <div className="flex items-center justify-between border-t-2 border-gray-200 pt-4">
                         <span className="text-lg font-semibold text-gray-700">总计</span>
-                        <span className="text-2xl font-bold text-blue-600">¥{order.totalPrice.toFixed(2)}</span>
+                        <span className="text-2xl font-bold text-blue-600">
+                          ¥{order.totalPrice.toFixed(2)}
+                        </span>
                       </div>
                     </>
                   ) : (
-                    <div className="text-center text-gray-500 py-4">暂无商品信息</div>
+                    <div className="py-4 text-center text-gray-500">暂无商品信息</div>
                   )}
                 </div>
               </div>
@@ -345,17 +375,17 @@ const OrderDetailPage = () => {
                   <Truck className="h-5 w-5 text-blue-500" />
                   <h2 className="text-xl font-semibold">配送轨迹</h2>
                 </div>
-                <div className="h-96 rounded-lg border border-gray-200 overflow-hidden">
+                <div className="h-96 overflow-hidden rounded-lg border border-gray-200">
                   {/* 判断是否有发货地址和收货地址 */}
                   {order.shippingFrom?.address && order.shippingTo?.address ? (
                     <RouteMap
                       startLocation={{
                         name: order.shippingFrom.address,
-                        coords: order.shippingFrom.location || [114.305539, 30.593175] // 默认武汉坐标
+                        coords: order.shippingFrom.location || [114.305539, 30.593175], // 默认武汉坐标
                       }}
                       endLocation={{
                         name: order.shippingTo.address,
-                        coords: order.shippingTo.location || [114.872389, 30.453667] // 默认黄冈坐标
+                        coords: order.shippingTo.location || [114.872389, 30.453667], // 默认黄冈坐标
                       }}
                       status={order.status}
                       currentLocation={getCurrentLocation()}
@@ -375,11 +405,11 @@ const OrderDetailPage = () => {
                     <RouteMap
                       startLocation={{
                         name: '发货仓库',
-                        coords: [114.305539, 30.593175] // 默认发货坐标
+                        coords: [114.305539, 30.593175], // 默认发货坐标
                       }}
                       endLocation={{
                         name: order.addressInfo.address,
-                        coords: order.addressInfo.location || [114.872389, 30.453667]
+                        coords: order.addressInfo.location || [114.872389, 30.453667],
                       }}
                       currentLocation={getCurrentLocation()}
                       showControls={true}
@@ -398,10 +428,15 @@ const OrderDetailPage = () => {
                   )}
                 </div>
                 <div className="mt-4 text-sm text-gray-500">
-                  {order.status === '待发货' ? '等待发货' : 
-                   order.status === '已揽收' ? '包裹已发出，正在运输中' :
-                   order.status === '运输中' ? '包裹正在运输途中' :
-                   order.status === '已签收' ? '包裹已送达' : '配送状态未知'}
+                  {order.status === '待发货'
+                    ? '等待发货'
+                    : order.status === '已揽收'
+                      ? '包裹已发出，正在运输中'
+                      : order.status === '运输中'
+                        ? '包裹正在运输途中'
+                        : order.status === '已签收'
+                          ? '包裹已送达'
+                          : '配送状态未知'}
                 </div>
               </div>
             </div>
@@ -427,27 +462,41 @@ const OrderDetailPage = () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">订单状态</span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      order.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
-                      order.status === 'delivered' ? 'bg-green-100 text-green-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {order.status === 'pending' ? '待处理' :
-                       order.status === 'confirmed' ? '已确认' :
-                       order.status === 'delivered' ? '已送达' :
-                       order.status}
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        order.status === 'pending'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : order.status === 'confirmed'
+                            ? 'bg-blue-100 text-blue-700'
+                            : order.status === 'delivered'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {order.status === 'pending'
+                        ? '待处理'
+                        : order.status === 'confirmed'
+                          ? '已确认'
+                          : order.status === 'delivered'
+                            ? '已送达'
+                            : order.status}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">发货状态</span>
-                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                      order.shippingStatus === '待发货' ? 'bg-yellow-100 text-yellow-700' :
-                      order.shippingStatus === '已揽收' ? 'bg-blue-100 text-blue-700' :
-                      order.shippingStatus === '运输中' ? 'bg-blue-100 text-blue-700' :
-                      order.shippingStatus === '已签收' ? 'bg-green-100 text-green-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        order.shippingStatus === '待发货'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : order.shippingStatus === '已揽收'
+                            ? 'bg-blue-100 text-blue-700'
+                            : order.shippingStatus === '运输中'
+                              ? 'bg-blue-100 text-blue-700'
+                              : order.shippingStatus === '已签收'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
                       {order.shippingStatus || '未知'}
                     </span>
                   </div>
@@ -474,31 +523,37 @@ const OrderDetailPage = () => {
                     <div>
                       <div className="mb-2 text-sm font-medium text-gray-700">发货地址</div>
                       <div className="space-y-1">
-                        <div className="text-sm text-gray-900">{order.shippingFrom.address || '-'}</div>
+                        <div className="text-sm text-gray-900">
+                          {order.shippingFrom.address || '-'}
+                        </div>
                         {order.shippingFrom.location && (
                           <div className="text-xs text-gray-500">
-                            坐标: [{order.shippingFrom.location[0]?.toFixed(6)}, {order.shippingFrom.location[1]?.toFixed(6)}]
+                            坐标: [{order.shippingFrom.location[0]?.toFixed(6)},{' '}
+                            {order.shippingFrom.location[1]?.toFixed(6)}]
                           </div>
                         )}
                       </div>
                     </div>
                   )}
-                  
+
                   {/* 收货地址 */}
                   {order.shippingTo && (
                     <div>
                       <div className="mb-2 text-sm font-medium text-gray-700">收货地址</div>
                       <div className="space-y-1">
-                        <div className="text-sm text-gray-900">{order.shippingTo.address || '-'}</div>
+                        <div className="text-sm text-gray-900">
+                          {order.shippingTo.address || '-'}
+                        </div>
                         {order.shippingTo.location && (
                           <div className="text-xs text-gray-500">
-                            坐标: [{order.shippingTo.location[0]?.toFixed(6)}, {order.shippingTo.location[1]?.toFixed(6)}]
+                            坐标: [{order.shippingTo.location[0]?.toFixed(6)},{' '}
+                            {order.shippingTo.location[1]?.toFixed(6)}]
                           </div>
                         )}
                       </div>
                     </div>
                   )}
-                  
+
                   {/* 如果没有独立的发货/收货地址，显示收件人信息 */}
                   {!order.shippingFrom && !order.shippingTo && order.addressInfo && (
                     <div>
@@ -506,21 +561,28 @@ const OrderDetailPage = () => {
                       <div className="space-y-3">
                         <div>
                           <div className="text-sm text-gray-500">姓名</div>
-                          <div className="mt-1 font-medium text-gray-900">{order.addressInfo.name || '-'}</div>
+                          <div className="mt-1 font-medium text-gray-900">
+                            {order.addressInfo.name || '-'}
+                          </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">联系电话</div>
-                          <div className="mt-1 font-medium text-gray-900">{order.addressInfo.phone || '-'}</div>
+                          <div className="mt-1 font-medium text-gray-900">
+                            {order.addressInfo.phone || '-'}
+                          </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">地址</div>
-                          <div className="mt-1 font-medium text-gray-900">{order.addressInfo.address || '-'}</div>
+                          <div className="mt-1 font-medium text-gray-900">
+                            {order.addressInfo.address || '-'}
+                          </div>
                         </div>
                         {order.addressInfo.location && (
                           <div>
                             <div className="text-sm text-gray-500">位置坐标</div>
                             <div className="mt-1 font-medium text-gray-900">
-                              [{order.addressInfo.location[0]?.toFixed(6)}, {order.addressInfo.location[1]?.toFixed(6)}]
+                              [{order.addressInfo.location[0]?.toFixed(6)},{' '}
+                              {order.addressInfo.location[1]?.toFixed(6)}]
                             </div>
                           </div>
                         )}
@@ -533,7 +595,7 @@ const OrderDetailPage = () => {
               {/* 配送时间线 */}
               <div className="rounded-xl bg-white p-6 shadow-sm">
                 {order.timeline && order.timeline.length > 0 ? (
-                  <TimeLine 
+                  <TimeLine
                     steps={order.timeline.map((item, index) => {
                       const timeStr = item.time || '';
                       const timeParts = timeStr.split(' ');
@@ -547,7 +609,7 @@ const OrderDetailPage = () => {
                         completed: !isLast,
                         current: isLast,
                       };
-                    })} 
+                    })}
                   />
                 ) : (
                   <TimeLine steps={MOCK_PACKAGE_DATA.steps} />

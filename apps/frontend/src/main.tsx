@@ -50,7 +50,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="shipping/list" element={<ShippingPage />} />
             </Route>
             {/* 用户端路由 */}
-            <Route path="client" element={<ClientLayout />}>
+            <Route path="/client" element={<ClientLayout />}>
               <Route index element={<MyOrdersPage />} />
               <Route path="orders/:orderId" element={<ClientOrderDetailPage />} />
             </Route>
