@@ -260,18 +260,35 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
 
       // 添加起点和终点标记
       const startMarker = new AMap.Marker({
-        position: from,
-        content:
-          '<div style="background:#4CAF50;color:white;padding:4px 8px;border-radius:12px;font-size:12px;">武汉</div>',
-        offset: new AMap.Pixel(-25, -10),
-      });
+      position: from,
+      content: `
+        <div style="
+          width: 20px;
+          height: 20px;
+          background: #4CAF50;
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        "></div>
+      `,
+      // offset设置为标记中心点
+      offset: new AMap.Pixel(-10, -10), // 调整为标记大小的一半
+    });
 
-      const endMarker = new AMap.Marker({
-        position: to,
-        content:
-          '<div style="background:#FF5722;color:white;padding:4px 8px;border-radius:12px;font-size:12px;">黄冈</div>',
-        offset: new AMap.Pixel(-25, -10),
-      });
+    const endMarker = new AMap.Marker({
+      position: to,
+      content: `
+        <div style="
+          width: 20px;
+          height: 20px;
+          background: #2196F3; /* 改为蓝色 */
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        "></div>
+      `,
+      offset: new AMap.Pixel(-10, -10), // 调整为标记大小的一半
+    });
 
       map.add([startMarker, endMarker]);
 
@@ -473,7 +490,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       <div ref={ref} style={{ width: '100%', height: '100%' }} />
 
       {/* 地图图例 */}
-      <div className="absolute top-4 left-4 rounded-lg border border-gray-200 bg-white p-3 shadow-md">
+      {/* <div className="absolute top-4 left-4 rounded-lg border border-gray-200 bg-white p-3 shadow-md">
         <div className="mb-2 text-sm font-semibold text-gray-700">图例</div>
         <div className="space-y-2 text-xs">
           <div className="flex items-center gap-2">
@@ -497,17 +514,17 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
             <span className="text-gray-600">配送范围 ({radius}km)</span>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* 半径信息 */}
-      <div className="absolute bottom-4 left-4 rounded-lg border border-gray-200 bg-white p-3 shadow-md">
+      {/* <div className="absolute bottom-4 left-4 rounded-lg border border-gray-200 bg-white p-3 shadow-md">
         <div className="text-sm font-semibold text-blue-600">
           当前配送半径: <span className="text-lg">{radius} km</span>
         </div>
         <div className="mt-1 text-xs text-gray-500">
           覆盖 {markers.filter((m) => m.color === 'green').length} / {markers.length} 个地址
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

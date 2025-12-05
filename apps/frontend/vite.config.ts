@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/baseUrl': {
-        target: 'http://localhost:3000',
+        target: 'http://8.134.211.162:3000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/baseUrl/, ''),
       },

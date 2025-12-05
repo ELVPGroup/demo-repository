@@ -1,7 +1,7 @@
 import { Form, Input, Button } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { apiAxiosInstance } from '../utils/axios';
+import { commonAxiosInstance } from '../utils/axios';
 import { useUserStore } from '../store/userStore';
 
 type RegisterFieldType = {
@@ -23,7 +23,7 @@ export function RegisterForm({ role }: RegisterFormProps) {
   const handleRegister = async (values: RegisterFieldType) => {
     try {
       setLoading(true);
-      const response = await apiAxiosInstance.post('/register', {
+      const response = await commonAxiosInstance.post('/register', {
         name: values.name,
         phone: values.phone,
         password: values.password,

@@ -1,20 +1,110 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { MOCK_PROVIDERS } from '../constants';
 import { type Order, OrderStatus, type DashboardStats } from '../types';
 import AMapVisualization from './AMapVisualization';
 import { generateRandomLocations, calculateDistance } from '../utils/locationUtils';
-import { CheckCircle2, Navigation, MapPin } from 'lucide-react';
+import { CheckCircle2, Navigation, MapPin, Loader2, Save, AlertCircle } from 'lucide-react';
+import { useDeliveryAreaStore } from "@/store/useDeliveryArea";
+import { message } from 'antd';
 
-// 生成武汉周边的随机收货地址
-const WUHAN_CENTER: [number, number] = [114.335539, 30.593175];
-const RANDOM_LOCATIONS = generateRandomLocations(WUHAN_CENTER, 30, 30); // 30个点，最大半径30公里
+const DEFAULT_CENTER: [number, number] = [114.335539, 30.593175];
+const DEFAULT_RADIUS = 13.6;
 
 const MerchantDashboard: React.FC = () => {
   // --- State ---
-  const [radius, setRadius] = useState<number>(13.6);
+  const [radius, setRadius] = useState<number>(DEFAULT_RADIUS);
+  const [center, setCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [selectedProviderId, setSelectedProviderId] = useState<string>(MOCK_PROVIDERS[0].id);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  
+  // 使用防抖ref
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // 使用配送区域store
+  const { 
+    deliveryArea, 
+    loading: areaLoading, 
+    updating: areaUpdating,
+    error: areaError, 
+    fetchDeliveryArea,
+    updateDeliveryArea,
+    updateRadiusLocal
+  } = useDeliveryAreaStore();
+
+  // 初始化：获取配送区域信息
+  useEffect(() => {
+    fetchDeliveryArea();
+  }, [fetchDeliveryArea]);
+
+  // 当配送区域数据加载完成时，更新center和radius
+  useEffect(() => {
+    if (deliveryArea) {
+      setCenter(deliveryArea.center);
+      setRadius(deliveryArea.radius);
+      console.log('配送区域加载完成:', deliveryArea);
+    }
+  }, [deliveryArea]);
+
+  // 处理半径变化（带防抖和同步）
+  const handleRadiusChange = useCallback(async (newRadius: number) => {
+    // 立即更新本地状态以获得即时UI响应
+    setRadius(newRadius);
+    updateRadiusLocal(newRadius);
+    
+    // 清除之前的定时器
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    // 设置新的防抖定时器
+    debounceTimerRef.current = setTimeout(async () => {
+      if (!deliveryArea) {
+        message.warning('未加载配送区域数据，无法同步');
+        return;
+      }
+      
+      setIsSyncing(true);
+      try {
+        // 传递当前的center和新的radius
+        const success = await updateDeliveryArea({
+          center: deliveryArea.center, // 传递当前的center
+          radius: newRadius,           // 传递新的radius
+        });
+        
+        if (success) {
+          message.success('配送半径已更新');
+        } else {
+          message.error(areaError || '更新失败');
+          // 恢复原来的值
+          if (deliveryArea) {
+            setRadius(deliveryArea.radius);
+            updateRadiusLocal(deliveryArea.radius);
+          }
+        }
+      } catch (err) {
+        console.error('同步半径失败:', err);
+        message.error('同步失败，请检查网络');
+        // 恢复原来的值
+        if (deliveryArea) {
+          setRadius(deliveryArea.radius);
+          updateRadiusLocal(deliveryArea.radius);
+        }
+      } finally {
+        setIsSyncing(false);
+      }
+    }, 800); // 800ms防抖
+  }, [deliveryArea, updateDeliveryArea, updateRadiusLocal, areaError]);
+
+  // 组件卸载时清理定时器
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   // Derived State
   const currentProvider = useMemo(
@@ -22,24 +112,28 @@ const MerchantDashboard: React.FC = () => {
     [selectedProviderId]
   );
 
-  // 初始化订单数据
+  // 初始化订单数据（基于当前center）
   useEffect(() => {
-    const initialOrders: Order[] = RANDOM_LOCATIONS.map((location, index) => {
-      const distance = calculateDistance(WUHAN_CENTER, location);
+    if (center) {
+      const RANDOM_LOCATIONS = generateRandomLocations(center, 30, 30);
+      
+      const initialOrders: Order[] = RANDOM_LOCATIONS.map((location, index) => {
+        const distance = calculateDistance(center, location);
 
-      return {
-        id: `ORD${String(index + 1).padStart(4, '0')}`,
-        customerName: `客户${index + 1}`,
-        address: `武汉市某区某街道${index + 1}号`,
-        location: { x: location[0], y: location[1] },
-        distance,
-        estimatedTime: 0,
-        status: OrderStatus.OUT_OF_RANGE,
-      };
-    });
+        return {
+          id: `ORD${String(index + 1).padStart(4, '0')}`,
+          customerName: `客户${index + 1}`,
+          address: `某区某街道${index + 1}号`,
+          location: { x: location[0], y: location[1] },
+          distance,
+          estimatedTime: 0,
+          status: OrderStatus.OUT_OF_RANGE,
+        };
+      });
 
-    setOrders(initialOrders);
-  }, []);
+      setOrders(initialOrders);
+    }
+  }, [center]);
 
   // --- Logic: Recalculate Order Statuses ---
   useEffect(() => {
@@ -47,7 +141,7 @@ const MerchantDashboard: React.FC = () => {
 
     const updatedOrders = orders.map((order) => {
       const distance = order.distance;
-      const time = (distance / currentProvider.speed) * 60 + 10; // 基础时间+10分钟
+      const time = (distance / currentProvider.speed) * 60 + 10;
 
       let status = OrderStatus.OUT_OF_RANGE;
 
@@ -93,6 +187,22 @@ const MerchantDashboard: React.FC = () => {
     }));
   }, [orders]);
 
+  // 当前使用的center和radius
+  const currentCenter = deliveryArea?.center || center;
+  const currentRadius = deliveryArea?.radius || radius;
+
+  // 如果正在加载配送区域数据
+  if (areaLoading && !deliveryArea) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gray-100">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-blue-600" />
+          <p className="mt-2 text-gray-600">正在加载配送区域信息...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full w-full bg-gray-100">
       {/* --- LEFT SIDEBAR --- */}
@@ -102,8 +212,24 @@ const MerchantDashboard: React.FC = () => {
           <div className="mb-1 flex items-center gap-2">
             <Navigation className="h-6 w-6" />
             <h1 className="text-xl font-bold">商家配送管理</h1>
+            {(isSyncing || areaUpdating) && (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            )}
           </div>
-          <p className="text-sm text-blue-100 opacity-90">武汉地区配送范围优化</p>
+          {/* <p className="text-sm text-blue-100 opacity-90">
+            {deliveryArea?.merchantId ? `${deliveryArea.merchantId} 配送范围优化` : '配送范围优化'}
+          </p> */}
+          
+          {/* 错误提示 */}
+          {areaError && (
+            <div className="mt-2 flex items-start gap-2 rounded bg-blue-500/20 p-2 text-xs">
+              <AlertCircle className="mt-0.5 h-3 w-3 flex-shrink-0" />
+              <div>
+                <p className="font-medium">警告</p>
+                <p className="opacity-80">{areaError}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="custom-scrollbar flex-1 overflow-y-auto">
@@ -146,20 +272,35 @@ const MerchantDashboard: React.FC = () => {
                 <h2 className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                   配送半径
                 </h2>
-                <span className="text-2xl font-bold text-blue-600">
-                  {radius.toFixed(1)} <span className="text-sm font-normal text-gray-500">km</span>
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-blue-600">
+                    {currentRadius.toFixed(1)} <span className="text-sm font-normal text-gray-500">km</span>
+                  </span>
+                  {(isSyncing || areaUpdating) && (
+                    <Loader2 className="h-3 w-3 animate-spin text-blue-500" />
+                  )}
+                </div>
               </div>
 
-              <input
-                type="range"
-                min="1"
-                max="50"
-                step="0.1"
-                value={radius}
-                onChange={(e) => setRadius(parseFloat(e.target.value))}
-                className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
-              />
+              <div className="relative">
+                <input
+                  type="range"
+                  min="1"
+                  max="50"
+                  step="0.1"
+                  value={currentRadius}
+                  onChange={(e) => handleRadiusChange(parseFloat(e.target.value))}
+                  className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 accent-blue-600"
+                  disabled={isSyncing || areaUpdating}
+                />
+                {isSyncing && (
+                  <div className="absolute -top-6 right-0 flex items-center gap-1 text-xs text-blue-600">
+                    <Save className="h-3 w-3" />
+                    同步中...
+                  </div>
+                )}
+              </div>
+              
               <div className="mt-2 flex justify-between text-xs text-gray-400">
                 <span>1 km</span>
                 <span>50 km</span>
@@ -175,6 +316,11 @@ const MerchantDashboard: React.FC = () => {
                 <div className="mt-1 text-xs text-blue-600">
                   {((stats.deliverable / stats.total) * 100).toFixed(1)}% 的地址在配送范围内
                 </div>
+                {deliveryArea && (
+                  <div className="mt-1 text-xs text-blue-500">
+                    中心坐标: [{currentCenter[0].toFixed(6)}, {currentCenter[1].toFixed(6)}]
+                  </div>
+                )}
               </div>
             </section>
 
@@ -244,13 +390,58 @@ const MerchantDashboard: React.FC = () => {
       {/* --- RIGHT MAP AREA --- */}
       <div className="relative h-full flex-1">
         <AMapVisualization
-          center={WUHAN_CENTER}
-          radius={radius}
-          setRadius={setRadius}
+          center={currentCenter}
+          radius={currentRadius}
+          setRadius={handleRadiusChange}
           markers={mapMarkers}
           showCircle={true}
           showRoute={false}
         />
+        
+        {/* 地图图例 */}
+        <div className="absolute top-4 left-4 rounded-lg border border-gray-200 bg-white p-3 shadow-md z-10">
+          <div className="mb-2 text-sm font-semibold text-gray-700">图例</div>
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full border border-white bg-blue-500"></div>
+              <span className="text-gray-600">配送中心</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full border border-white bg-green-500"></div>
+              <span className="text-gray-600">可配送地址</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full border border-white bg-orange-500"></div>
+              <span className="text-gray-600">时效风险地址</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full border border-white bg-red-500"></div>
+              <span className="text-gray-600">范围外地址</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="h-1 w-4 rounded bg-blue-500"></div>
+              <span className="text-gray-600">配送范围 ({currentRadius.toFixed(1)}km)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 半径信息 */}
+        <div className="absolute bottom-4 left-4 rounded-lg border border-gray-200 bg-white p-3 shadow-md z-10">
+          <div className="text-sm font-semibold text-blue-600">
+            当前配送半径: <span className="text-lg">{currentRadius.toFixed(1)} km</span>
+            {(isSyncing || areaUpdating) && (
+              <Loader2 className="ml-2 inline h-3 w-3 animate-spin" />
+            )}
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            覆盖 {mapMarkers.filter((m) => m.color === 'green').length} / {mapMarkers.length} 个地址
+          </div>
+          {deliveryArea && (
+            <div className="mt-1 text-xs text-blue-500">
+              商家ID: {deliveryArea.merchantId}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
