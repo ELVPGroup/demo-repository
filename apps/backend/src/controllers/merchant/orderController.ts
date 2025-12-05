@@ -13,7 +13,7 @@ import type { CreateOrderBody } from '@/types/order.js';
 import { parseServiceId } from '@/utils/serverIdHandler.js';
 import { getDictKey, orderStatusDict } from '@/utils/dicts.js';
 import type { UpdateOrderServicePayload } from '@/types/order.js';
-import { getDefinedKeyValues } from '@/utils/general.js';
+import { getDefinedKeyValues, getTruthyKeyValues } from '@/utils/general.js';
 
 /**
  * 商家端订单控制器
@@ -35,7 +35,7 @@ export class MerchantOrderController {
         // 添加可选分页参数
         ...(offset !== undefined && limit !== undefined ? { offset, limit } : {}),
         // 加入可选筛选参数
-        ...filterParams,
+        ...getTruthyKeyValues(filterParams),
       };
       const result = await orderService.getOrderList(params);
 

@@ -33,6 +33,9 @@ export function generateServiceId(rawId: number, key: ServiceKey) {
  */
 export function parseServiceId(serviceId: string) {
   console.log(`解析服务ID: ${serviceId}`);
+  if (!serviceId.includes('-')) {
+    throw new Error('服务ID格式错误');
+  }
   const [key, id] = serviceId.split('-');
   return { key: key as ServiceKey, id: Number(id) };
 }

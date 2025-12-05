@@ -19,7 +19,7 @@ export type ClientOrderListParams = {
 export type ClientOrderListFilterParams = {
   status?: OrderStatus;
   productName?: string;
-  orderId?: number;
+  orderId?: string;
 };
 
 export type CreateOrderItemInput = {

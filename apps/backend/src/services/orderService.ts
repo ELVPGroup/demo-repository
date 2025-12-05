@@ -9,16 +9,8 @@ import type {
 import { orderModel } from '../models/orderModel.js';
 import { userModel } from '../models/userModel.js';
 import type { OrderStatus } from '../types/order.js';
-type OrderWithItems = {
-  orderId: number;
-  status: OrderStatus;
-  createdAt: Date;
-  userId: number | null;
-  merchantId: number | null;
-  user: { name: string } | null;
-  merchant: { name: string } | null;
-  orderItems: Array<{ quantity: number; product: { price: number } }>;
-};
+import type { Prisma } from 'generated/prisma/client.js';
+import { parseServiceId } from '@/utils/serverIdHandler.js';
 import prisma from '../db.js';
 import { addressModel } from '@/models/addressModel.js';
 import { productModel } from '@/models/productModel.js';
@@ -33,6 +25,28 @@ import {
   metersPerDegreeLonAtLat,
 } from '@/utils/general.js';
 import { logisticsService } from '@/services/logisticsService.js';
+import dayjs from 'dayjs';
+
+// 订单列表查询时需要包含的关联模型
+const orderModelFindInclude = {
+  orderItems: { include: { product: { select: { price: true } } } },
+  user: { select: { name: true } },
+  merchant: { select: { name: true } },
+};
+type OrderListPayload = Prisma.OrderGetPayload<{
+  include: typeof orderModelFindInclude;
+}>;
+
+// 配送区域订单列表查询时需要包含的关联模型
+const areaOrderModelFindInclude = {
+  orderItems: { include: { product: { select: { price: true } } } },
+  user: { select: { name: true } },
+  merchant: { select: { name: true } },
+  detail: { include: { addressTo: true } },
+};
+type AreaOrderListPayload = Prisma.OrderGetPayload<{
+  include: typeof areaOrderModelFindInclude;
+}>;
 
 export class OrderService {
   /**
@@ -43,7 +57,7 @@ export class OrderService {
       | (MerchantOrderListParams & Partial<MerchantOrderListFilterParams>)
       | (ClientOrderListParams & Partial<ClientOrderListFilterParams>)
   ) {
-    const where: Record<string, unknown> = {};
+    const where: Prisma.OrderWhereInput = {};
     if ('merchantId' in payload && payload.merchantId !== undefined) {
       // 商家订单列表
       where['merchantId'] = payload.merchantId;
@@ -67,7 +81,7 @@ export class OrderService {
         };
       }
       if ('orderId' in payload && payload.orderId !== undefined) {
-        where['orderId'] = payload.orderId;
+        where['orderId'] = Number(payload.orderId);
       }
     } else {
       throw new Error('必须提供商家ID或用户ID');
@@ -81,18 +95,8 @@ export class OrderService {
       ...(payload.offset !== undefined ? { skip: payload.offset } : {}),
       ...(payload.limit !== undefined ? { take: payload.limit } : {}),
       ...(payload.sort && payload.sortBy ? { orderBy: { [payload.sortBy]: payload.sort } } : {}),
-      include: {
-        orderItems: {
-          include: {
-            product: {
-              select: { price: true },
-            },
-          },
-        },
-        user: { select: { name: true } },
-        merchant: { select: { name: true } },
-      },
-    })) as OrderWithItems[];
+      include: orderModelFindInclude,
+    })) as OrderListPayload[];
 
     return orders.map((order) => {
       const amount = order.orderItems.reduce(
@@ -100,18 +104,17 @@ export class OrderService {
         0
       );
       const totalPrice = order.orderItems.reduce(
-        (acc: number, it: { quantity: number; product: { price: number } }) =>
-          acc + it.quantity * it.product.price,
+        (acc: number, it) => acc + it.quantity * Number(it.product.price),
         0
       );
       return {
         orderId: generateServiceId(order.orderId, ServiceKey.order),
         status: getDictName<OrderStatus>(order.status, orderStatusDict),
-        createdAt: order.createdAt,
+        createdAt: dayjs(order.createdAt).format('YYYY-MM-DD HH:mm:ss'),
         userId: generateServiceId(order.userId!, ServiceKey.client),
         merchantId: generateServiceId(order.merchantId!, ServiceKey.merchant),
         amount,
-        totalPrice,
+        totalPrice: totalPrice.toFixed(2),
         ...('merchantId' in payload && payload.merchantId !== undefined
           ? { userName: order.user?.name ?? '' }
           : {}),
@@ -136,17 +139,13 @@ export class OrderService {
       throw new Error('未配置配送区域');
     }
 
-    const where: Record<string, unknown> = {};
+    const where: Prisma.OrderWhereInput = {};
     where['merchantId'] = payload.merchantId;
     if (payload.status !== undefined) {
       where['status'] = payload.status;
     }
 
-    let ordersRaw: Array<
-      OrderWithItems & {
-        detail: { addressTo: { longitude: number; latitude: number } } | null;
-      }
-    > = [];
+    let ordersRaw: AreaOrderListPayload[] = [];
 
     // 配送区域中心点与半径处理
     const centerLon = Number(deliveryArea.longitude);
@@ -175,15 +174,8 @@ export class OrderService {
       ...(payload.offset !== undefined ? { skip: payload.offset } : {}),
       ...(payload.limit !== undefined ? { take: payload.limit } : {}),
       ...(payload.sort && payload.sortBy ? { orderBy: { [payload.sortBy]: payload.sort } } : {}),
-      include: {
-        orderItems: {
-          include: { product: { select: { price: true } } },
-        },
-        user: { select: { name: true } },
-        merchant: { select: { name: true } },
-        detail: { include: { addressTo: true } },
-      },
-    })) as typeof ordersRaw;
+      include: areaOrderModelFindInclude,
+    })) as AreaOrderListPayload[];
 
     ordersRaw = ordersRaw.filter((o) => {
       const to = o.detail?.addressTo;
@@ -204,18 +196,17 @@ export class OrderService {
         0
       );
       const totalPrice = order.orderItems.reduce(
-        (acc: number, it: { quantity: number; product: { price: number } }) =>
-          acc + it.quantity * it.product.price,
+        (acc: number, it) => acc + it.quantity * Number(it.product.price),
         0
       );
       return {
         orderId: generateServiceId(order.orderId, ServiceKey.order),
         status: getDictName<OrderStatus>(order.status, orderStatusDict),
-        createdAt: order.createdAt,
+        createdAt: dayjs(order.createdAt).format('YYYY-MM-DD HH:mm:ss'),
         userId: generateServiceId(order.userId!, ServiceKey.client),
         merchantId: generateServiceId(order.merchantId!, ServiceKey.merchant),
         amount,
-        totalPrice,
+        totalPrice: Number(totalPrice).toFixed(2),
         ...(location ? { location } : {}),
         ...(distance !== undefined ? { distance, distanceKm: distance / 1000 } : {}),
         inRange,
@@ -384,7 +375,7 @@ export class OrderService {
       0
     );
     const totalPrice = order.orderItems.reduce(
-      (acc, it) => acc + it.quantity * (it.product.price as unknown as number),
+      (acc, it) => acc + it.quantity * Number(it.product.price),
       0
     );
 
@@ -395,7 +386,7 @@ export class OrderService {
       userId: generateServiceId(order.userId!, ServiceKey.client),
       userName: order.user?.name ?? '',
       status: getDictName(order.status, orderStatusDict),
-      createdAt: order.createdAt,
+      createdAt: dayjs(order.createdAt).format('YYYY-MM-DD HH:mm:ss'),
       shippingFrom: from
         ? {
             addressInfoId: generateServiceId(from.addressInfoId, ServiceKey.addressInfo),
@@ -426,7 +417,7 @@ export class OrderService {
       shippingStatus: latest ? getDictName(latest.shippingStatus, shippingStatusDict) : undefined,
       timeline: timeline.map((timelineItem) => ({
         shippingStatus: getDictName(timelineItem.shippingStatus, shippingStatusDict),
-        time: timelineItem.time,
+        time: dayjs(timelineItem.time).format('YYYY-MM-DD HH:mm:ss'),
         description: timelineItem.description ?? '',
       })),
     };

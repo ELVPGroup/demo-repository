@@ -15,6 +15,7 @@ import { orderStatusColors } from '@/theme/theme';
 import type { ColumnsType } from 'antd/es/table';
 import type { SortOrder } from 'antd/es/table/interface';
 import type { TableProps } from 'antd';
+import { useUserStore } from '@/store/userStore';
 
 const MyOrdersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -36,9 +37,8 @@ const MyOrdersPage: React.FC = () => {
   // 处理退出登录
   const handleLogout = () => {
     // 清除本地存储的认证信息
-    localStorage.removeItem('token');
-    localStorage.removeItem('userInfo');
     sessionStorage.clear();
+    useUserStore.getState().logout();
 
     // 显示成功消息
     message.success('已成功退出登录');
@@ -83,7 +83,7 @@ const MyOrdersPage: React.FC = () => {
   // 数据获取 Effect
   useEffect(() => {
     setParams({
-      customerName: search.trim() || undefined, // 使用 customerName 字段传递搜索关键词，保持与商家端接口一致
+      orderId: search.trim() || undefined, // 使用 orderId 字段传递搜索关键词
       limit: pageSize,
       offset: (currentPage - 1) * pageSize,
       sort: sortOrder,
@@ -143,7 +143,7 @@ const MyOrdersPage: React.FC = () => {
       title: '金额',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
-      render: (amount: number) => `¥${amount.toFixed(2)}`,
+      render: (amount: number) => `¥${Number(amount).toFixed(2)}`,
       sorter: true,
       sortOrder: priceSortOrder,
     },

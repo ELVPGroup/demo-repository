@@ -21,6 +21,8 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
   params: {
     status: '',
     customerName: '',
+    orderId: '',
+    productName: '',
     limit: 10,
     offset: 0,
     sort: 'asc',
@@ -42,7 +44,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       const { side } = useUserStore.getState();
       const axiosInstance = side === 'client' ? clientAxiosInstance : merchantAxiosInstance;
 
-      const requestBody = side === 'client' ? { ...params } : { params };
+      const requestBody = { ...params };
 
       const res = await axiosInstance.post<OrderListResponse>(
         side === 'client' ? '/orders' : '/orders/list',
