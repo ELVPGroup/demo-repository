@@ -49,18 +49,21 @@ const MyOrdersPage: React.FC = () => {
 
   // 状态映射
   const getStatusConfig = (status: OrderStatus) => {
-    const statusMap: Record<OrderStatus | '已取消', { text: string; color: string; textColor: string }> = {
-      '待发货': {
+    const statusMap: Record<
+      OrderStatus | '已取消',
+      { text: string; color: string; textColor: string }
+    > = {
+      待发货: {
         text: '待发货',
         color: orderStatusColors['待发货']?.bg || orderStatusColors.default.bg,
         textColor: orderStatusColors['待发货']?.text || orderStatusColors.default.text,
       },
-      '运输中': {
+      运输中: {
         text: '运输中',
         color: orderStatusColors['运输中']?.bg || orderStatusColors.default.bg,
         textColor: orderStatusColors['运输中']?.text || orderStatusColors.default.text,
       },
-      '已完成': {
+      已完成: {
         text: '已完成',
         color: orderStatusColors['已完成']?.bg || orderStatusColors.default.bg,
         textColor: orderStatusColors['已完成']?.text || orderStatusColors.default.text,
@@ -194,7 +197,7 @@ const MyOrdersPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 pt-20">
       <div className="mx-auto max-w-6xl space-y-6">
         {/* 头部区域 */}
         <div className="flex items-center justify-between">

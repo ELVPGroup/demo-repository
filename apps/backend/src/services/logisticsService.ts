@@ -38,6 +38,7 @@ export class LogisticsService {
       startedAt: number;
       baseSpeedKmh: number;
       currentIndex: number;
+      totalDistance: number;
       events: Array<{ point: GeoPoint; targetTime: number; progress: number }>;
     }
   >();
@@ -130,6 +131,7 @@ export class LogisticsService {
       startedAt,
       baseSpeedKmh: cfg.speedKmh,
       currentIndex: 0,
+      totalDistance,
       events,
     });
     this.startTimer();
@@ -181,6 +183,29 @@ export class LogisticsService {
         },
       });
     });
+  }
+
+  getShipmentState(orderId: number) {
+    const s = this.simulations.get(orderId);
+    if (!s) return null;
+    const now = Date.now();
+    let idx = s.currentIndex;
+    while (idx < s.events.length && s.events[idx]!.targetTime <= now) idx++;
+    idx = Math.max(0, Math.min(idx - 1, s.events.length - 1));
+    const e = s.events[idx]!;
+    const progress = e.progress;
+    const total = s.totalDistance;
+    const remaining = Math.max(0, total * (1 - progress));
+    const lastTarget = s.events.length > 0 ? s.events[s.events.length - 1]!.targetTime : now;
+    return {
+      location: e.point,
+      progress,
+      totalDistanceMeters: total,
+      remainingDistanceMeters: remaining,
+      startedAt: s.startedAt,
+      baseSpeedKmh: s.baseSpeedKmh,
+      plannedArrivalTime: lastTarget,
+    };
   }
 }
 

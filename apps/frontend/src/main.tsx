@@ -11,11 +11,13 @@ const DeliveryManagementPage = lazy(() => import('@/pages/merchant/DeliveryManag
 const MerchantOrderDetailPage = lazy(() => import('@/pages/merchant/OrderDetailPage.tsx'));
 const OrdersPage = lazy(() => import('./pages/merchant/OrdersPage.tsx'));
 const ShippingPage = lazy(() => import('./pages/merchant/ShippingPage.tsx'));
+const ProductsPage = lazy(() => import('./pages/merchant/ProductsPage.tsx'));
 import MerchantLayout from '@/layouts/MerchantLayout.tsx';
 // 用户端
 import ClientLayout from '@/layouts/ClientLayout.tsx';
 const MyOrdersPage = lazy(() => import('@/pages/client/MyOrdersPage.tsx'));
 const ClientOrderDetailPage = lazy(() => import('@/pages/client/OrderDetailPage.tsx'));
+const ClientProductsPage = lazy(() => import('@/pages/client/ProductsPage.tsx'));
 
 //为AntD配置样式
 import { ConfigProvider } from 'antd';
@@ -48,10 +50,12 @@ createRoot(document.getElementById('root')!).render(
               <Route path="orders/:orderId" element={<MerchantOrderDetailPage />} />
               <Route path="delivery-management" element={<DeliveryManagementPage />} />
               <Route path="shipping/list" element={<ShippingPage />} />
+              <Route path="products/list" element={<ProductsPage />} />
             </Route>
             {/* 用户端路由 */}
             <Route path="/client" element={<ClientLayout />}>
-              <Route index element={<MyOrdersPage />} />
+              <Route index element={<ClientProductsPage />} />
+              <Route path="orders" element={<MyOrdersPage />} />
               <Route path="orders/:orderId" element={<ClientOrderDetailPage />} />
             </Route>
           </Routes>

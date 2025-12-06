@@ -1,9 +1,10 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { message } from 'antd';
 import { useUserStore } from '../store/userStore';
+import { BASE_SERVER_URL } from '@/config';
 
 // 公共配置
-const BASE_URL = 'http://8.134.211.162:3000/api';
+const BASE_URL = `${BASE_SERVER_URL}/api`;
 
 // 创建 axios 实例的工厂函数
 const createAxiosInstance = (baseURL: string, config?: AxiosRequestConfig): AxiosInstance => {
