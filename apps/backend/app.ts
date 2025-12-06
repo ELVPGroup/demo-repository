@@ -11,6 +11,7 @@ import {
 } from './src/middleware/errorHandleMiddleware.js';
 import { baseResponseMiddleware } from './src/middleware/baseResponseMiddleware.js';
 import { getStaticRoot } from '@/utils/config.js';
+import dayjs from 'dayjs';
 
 const app = new Koa();
 
@@ -20,7 +21,11 @@ app.use(cors());
 // 解析请求体
 app.use(bodyParser());
 // 日志中间件
-app.use(koaLogger());
+app.use(
+  koaLogger((str, args) => {
+    process.stdout.write(`${dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss')}${str}`);
+  })
+);
 
 // 基础响应包装中间件
 app.use(baseResponseMiddleware);

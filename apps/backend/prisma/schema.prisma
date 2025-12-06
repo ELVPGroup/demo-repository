@@ -49,6 +49,8 @@ model Merchant {
   password           String              @db.VarChar(255)
   addresses          AddressInfo[]
   orders             Order[]
+  // 一个商家对应多个商品
+  products           Product[]
   // 一个商家对应一个配送范围
   deliveryArea       DeliveryArea?
   // 多个
@@ -88,6 +90,12 @@ model Product {
   description String? @db.Text
   price       Decimal @db.Decimal(10, 2)
   amount      Int
+  // 商品图片链接
+  imageUrl    String? @db.VarChar(255)
+
+  // Foreign Key - 商品所属商家（一对多）
+  merchantId Int      @map("merchantId")
+  merchant   Merchant @relation(fields: [merchantId], references: [merchantId])
 
   // 一个商品可被多个订单项引用
   orderItems OrderItem[]
