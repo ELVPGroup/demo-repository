@@ -16,6 +16,14 @@ export async function baseResponseMiddleware(ctx: Context, next: Next) {
   if (!ctx.body || typeof ctx.body !== 'object') {
     return;
   }
+  // 非 JSON 响应（如文件流）直接跳过
+  if (ctx.response.type && ctx.response.type !== 'application/json') {
+    return;
+  }
+  // 兼容流对象：存在 pipe 方法时不包裹
+  if (typeof (ctx.body as { pipe: unknown }).pipe === 'function') {
+    return;
+  }
 
   const payload = ctx.body as Record<string, unknown>;
 

@@ -6,6 +6,7 @@ import merchantShippingRouter from './merchant/shipping.js';
 import merchantDeliveryAreaRouter from './merchant/deliveryArea.js';
 import merchantLogisticsProviderRouter from './merchant/logisticsProvider.js';
 import userOrderRouter from './client/orders.js';
+import uploadRouter from './upload.js';
 
 /**
  * 所有路由的聚合
@@ -18,6 +19,7 @@ export const routers: Router[] = [
   merchantDeliveryAreaRouter,
   merchantLogisticsProviderRouter,
   userOrderRouter,
+  uploadRouter,
 ];
 
 export default routers;

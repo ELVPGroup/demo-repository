@@ -3,12 +3,14 @@ import Koa from 'koa';
 import { bodyParser } from '@koa/bodyparser';
 import cors from '@koa/cors';
 import koaLogger from 'koa-logger';
+import serve from 'koa-static';
 import { routers } from './src/routes/index.js';
 import {
   errorHandleMiddleware,
   notFoundMiddleware,
 } from './src/middleware/errorHandleMiddleware.js';
 import { baseResponseMiddleware } from './src/middleware/baseResponseMiddleware.js';
+import { getStaticRoot } from '@/utils/config.js';
 
 const app = new Koa();
 
@@ -35,6 +37,19 @@ app.use(async (ctx, next) => {
       _message: 'Health check passed',
       _data: { status: 'ok' },
     };
+    return;
+  }
+  await next();
+});
+
+// 静态资源服务
+const staticRoot = getStaticRoot();
+const staticMiddleware = serve(staticRoot);
+app.use(async (ctx, next) => {
+  if (ctx.path.startsWith('/static')) {
+    // 去掉前缀后交给 koa-static 处理
+    ctx.path = ctx.path.replace(/^\/static/, '') || '/';
+    await staticMiddleware(ctx, next);
     return;
   }
   await next();
