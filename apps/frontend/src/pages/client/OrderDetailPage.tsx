@@ -8,6 +8,7 @@ import React from 'react';
 import ProductList from '@/commonpart/ProductList';
 import RecipientInfo from '@/commonpart/RecipientInfo';
 import ShippingTimeline from '@/commonpart/ShippingTimeline';
+import RouteMap from '@/components/RouteMap';
 
 const OrderDetailPage = () => {
   const { orderId } = useParams();
@@ -21,6 +22,24 @@ const OrderDetailPage = () => {
       fetchOrderDetail(orderId);
     }
   }, [orderId, fetchOrderDetail]);
+
+  // 根据订单状态和发货状态确定当前位置
+  const getCurrentLocation = () => {
+    if (!order) return null;
+
+    // 如果订单已送达，使用收货地址作为当前位置
+    if (order.status === '已签收' || order.status === 'delivered') {
+      return order.shippingTo?.location || order.shippingTo?.location;
+    }
+
+    // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
+    if (order.status === '运输中' || order.status === '已发货') {
+      return order.shippingFrom?.location || order.shippingFrom?.location;
+    }
+
+    // 默认使用发货地址
+    return order.shippingFrom?.location || order.addressInfo?.location;
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -85,12 +104,58 @@ const OrderDetailPage = () => {
                 <Truck className="h-5 w-5 text-blue-500" />
                 <h2 className="text-xl font-semibold">配送轨迹</h2>
               </div>
-              <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-gray-200 bg-gray-50">
-                <div className="text-center">
-                  <MapPin className="mx-auto h-12 w-12 text-gray-400" />
-                  <p className="mt-2 text-gray-500">配送轨迹地图占位</p>
+              <div className="h-96 overflow-hidden rounded-lg border border-gray-200">
+                  {/* 判断是否有发货地址和收货地址 */}
+                  {order.shippingFrom?.address && order.shippingTo?.address ? (
+                    <RouteMap
+                      startLocation={{
+                        name: order.shippingFrom.address,
+                        coords: order.shippingFrom.location || [114.305539, 30.593175], // 默认武汉坐标
+                      }}
+                      endLocation={{
+                        name: order.shippingTo.address,
+                        coords: order.shippingTo.location || [114.872389, 30.453667], // 默认黄冈坐标
+                      }}
+                      status={order.status}
+                      currentLocation={getCurrentLocation()}
+                      showControls={true}
+                      showInfoCard={true}
+                      showProgressIndicator={true}
+                      className="h-full"
+                      onMapClick={(coords) => {
+                        console.log('地图点击坐标:', coords);
+                      }}
+                      onZoomChange={(zoom) => {
+                        console.log('地图缩放级别:', zoom);
+                      }}
+                    />
+                  ) : order.shippingTo?.address ? (
+                    // 如果没有发货地址，但有一个收货地址，可以显示从默认位置到收货地址的路线
+                    <RouteMap
+                      startLocation={{
+                        name: '发货仓库',
+                        coords: [114.305539, 30.593175], // 默认发货坐标
+                      }}
+                      endLocation={{
+                        name: order.shippingTo.address,
+                        coords: order.shippingTo.location || [114.872389, 30.453667],
+                      }}
+                      currentLocation={getCurrentLocation()}
+                      showControls={true}
+                      showInfoCard={true}
+                      showProgressIndicator={true}
+                      className="h-full"
+                    />
+                  ) : (
+                    // 如果没有任何地址信息，显示提示
+                    <div className="flex h-full items-center justify-center">
+                      <div className="text-center">
+                        <MapPin className="mx-auto h-12 w-12 text-gray-400" />
+                        <p className="mt-2 text-gray-500">暂无配送地址信息</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
             </div>
           </div>
         )}
