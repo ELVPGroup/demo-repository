@@ -91,6 +91,23 @@ class ProductService {
     const deleted = await prisma.product.delete({ where: { productId } });
     return this.generateProvideProductStruct(deleted);
   }
+
+  /**
+   * 客户端商品列表
+   * @param params 分页参数
+   */
+  async listClient(params: { limit?: number; offset?: number }) {
+    const products = await prisma.product.findMany({
+      ...(params.offset !== undefined ? { skip: params.offset } : {}),
+      ...(params.limit !== undefined ? { take: params.limit } : {}),
+      orderBy: { productId: 'desc' },
+      include: { merchant: { select: { name: true } } },
+    });
+    return products.map((product) => ({
+      ...this.generateProvideProductStruct(product),
+      merchantName: product.merchant?.name ?? '',
+    }));
+  }
 }
 
 export const productService = new ProductService();

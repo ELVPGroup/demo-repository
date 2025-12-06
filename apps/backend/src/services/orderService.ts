@@ -23,8 +23,11 @@ import {
   haversineDistanceMeters,
   METERS_PER_DEGREE_LAT,
   metersPerDegreeLonAtLat,
+  parseAmapPolyline,
+  kmhToMps,
 } from '@/utils/general.js';
 import { logisticsService } from '@/services/logisticsService.js';
+import { amapClient } from '@/amapClient.js';
 import dayjs from 'dayjs';
 
 // 订单列表查询时需要包含的关联模型
@@ -379,6 +382,72 @@ export class OrderService {
       0
     );
 
+    const statusVal = order.status;
+    let extras: Partial<{
+      currentLocation: [number, number];
+      distance: number;
+      estimatedTime: string;
+      isTimeRisk: boolean;
+    }> = {};
+    if ((statusVal === 'PENDING' || statusVal === 'SHIPPED') && from && to) {
+      if (statusVal === 'PENDING') {
+        const currentLocation: [number, number] = [from.longitude, from.latitude];
+        let distanceKm = 0;
+        try {
+          const route = await amapClient.directionDriving(
+            [from.longitude, from.latitude],
+            [to.longitude, to.latitude]
+          );
+          const points = parseAmapPolyline(route.polyline || '');
+          if (points.length >= 2) {
+            let total = 0;
+            let prev = points[0]!;
+            for (let i = 1; i < points.length; i++) {
+              const curr = points[i]!;
+              total += haversineDistanceMeters(prev, curr);
+              prev = curr;
+            }
+            distanceKm = total / 1000;
+          } else {
+            distanceKm =
+              haversineDistanceMeters(
+                [from.longitude, from.latitude],
+                [to.longitude, to.latitude]
+              ) / 1000;
+          }
+        } catch {
+          distanceKm =
+            haversineDistanceMeters([from.longitude, from.latitude], [to.longitude, to.latitude]) /
+            1000;
+        }
+        const speedKmh = 40;
+        const etaMs = (distanceKm * 1000) / kmhToMps(speedKmh);
+        extras = {
+          currentLocation,
+          distance: Number(distanceKm.toFixed(3)),
+          estimatedTime: dayjs(Date.now() + etaMs).format('YYYY-MM-DD HH:mm:ss'),
+          isTimeRisk: false,
+        };
+      } else if (statusVal === 'SHIPPED') {
+        const live = logisticsService.getShipmentState(order.orderId);
+        if (live) {
+          const speedKmh = live.baseSpeedKmh;
+          const remainingKm = live.remainingDistanceMeters / 1000;
+          const etaMs = live.remainingDistanceMeters / kmhToMps(speedKmh);
+          const elapsedSec = (Date.now() - live.startedAt) / 1000;
+          const expectedTraveled = kmhToMps(speedKmh) * elapsedSec;
+          const actualTraveled = live.totalDistanceMeters * live.progress;
+          const isRisk = actualTraveled < expectedTraveled * 0.85;
+          extras = {
+            currentLocation: live.location,
+            distance: Number(remainingKm.toFixed(3)),
+            estimatedTime: dayjs(Date.now() + etaMs).format('YYYY-MM-DD HH:mm:ss'),
+            isTimeRisk: isRisk,
+          };
+        }
+      }
+    }
+
     return {
       orderId: generateServiceId(order.orderId, ServiceKey.order),
       merchantId: generateServiceId(order.merchantId!, ServiceKey.merchant),
@@ -420,6 +489,10 @@ export class OrderService {
         time: dayjs(timelineItem.time).format('YYYY-MM-DD HH:mm:ss'),
         description: timelineItem.description ?? '',
       })),
+      ...(extras.currentLocation ? { currentLocation: extras.currentLocation } : {}),
+      ...(extras.distance !== undefined ? { distance: extras.distance } : {}),
+      ...(extras.estimatedTime ? { estimatedTime: extras.estimatedTime } : {}),
+      ...(typeof extras.isTimeRisk === 'boolean' ? { isTimeRisk: extras.isTimeRisk } : {}),
     };
   }
 
@@ -475,6 +548,190 @@ export class OrderService {
       { speedKmh: logistics.speed }
     );
     return this.getOrderDetail(orderId);
+  }
+
+  /**
+   * 客户端创建订单：根据收货地址与商品列表创建订单
+   * - 校验所有商品属于同一商家
+   * - 使用该商家的一个发货地址作为发货地
+   * - 初始状态为 PENDING
+   * - 返回满足前端契约的简化数据
+   */
+  async createOrderByClient(payload: {
+    userId: number;
+    shippingTo: { name: string; phone: string; address: string };
+    products: Array<{ productId: number; merchantId: number }>;
+  }) {
+    const { userId, shippingTo, products } = payload;
+    const merchantId = products[0]!.merchantId;
+
+    // 校验所有商品存在且归属商家
+    const productIds = products.map((p) => p.productId);
+    const productRecords = await prisma.product.findMany({
+      where: { productId: { in: productIds } },
+    });
+    if (productRecords.length !== productIds.length) {
+      throw new Error('存在无效商品ID');
+    }
+    if (productRecords.some((prod) => prod.merchantId !== merchantId)) {
+      throw new Error('商品归属与商家不一致');
+    }
+    const merchant = await prisma.merchant.findUnique({ where: { merchantId } });
+    if (!merchant) throw new Error('商家不存在');
+    // 选择商家一个发货地址
+    const addressFrom = await prisma.addressInfo.findFirst({ where: { merchantId } });
+    if (!addressFrom) throw new Error('商家未配置发货地址');
+
+    const created = await prisma.$transaction(async (tx) => {
+      // 创建收货地址（客户端收货地址）
+      const toData = await addressService.geocodeAndBuildCreateData({
+        userId,
+        name: shippingTo.name,
+        phone: shippingTo.phone,
+        address: shippingTo.address,
+      });
+      const to = await tx.addressInfo.create({ data: toData });
+
+      // 创建订单
+      const order = await tx.order.create({ data: { userId, merchantId } });
+      // 订单详情
+      await tx.orderDetail.create({
+        data: {
+          order: { connect: { orderId: order.orderId } },
+          addressFrom: { connect: { addressInfoId: addressFrom.addressInfoId } },
+          addressTo: { connect: { addressInfoId: to.addressInfoId } },
+        },
+      });
+      // 时间线（待商家确认）
+      await tx.timelineItem.create({
+        data: {
+          orderId: order.orderId,
+          description: '用户创建订单，待商家确认',
+        },
+      });
+      // 订单项（默认数量 1）
+      await tx.orderItem.createMany({
+        data: productIds.map((pid) => ({ orderId: order.orderId, productId: pid, quantity: 1 })),
+      });
+
+      return order;
+    });
+
+    return {
+      orderId: generateServiceId(created.orderId, ServiceKey.order),
+      merchantId: generateServiceId(merchantId, ServiceKey.merchant),
+      merchantName: merchant.name,
+      userId: generateServiceId(userId, ServiceKey.client),
+      status: '待确认',
+      amount: 0,
+      createdAt: dayjs(created.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+      totalPrice: 0,
+    };
+  }
+
+  /**
+   * 客户端创建订单（支持多商家）：按 merchantId 分组分别创建订单
+   * products: [{ productId, merchantId, amount }]
+   */
+  async createOrdersByClient(payload: {
+    userId: number;
+    shippingTo: { name: string; phone: string; address: string };
+    products: Array<{ productId: number; merchantId: number; amount: number }>;
+  }) {
+    const { userId, shippingTo, products } = payload;
+    // 按商家分组商品
+    const byMerchant = new Map<number, Array<{ productId: number; amount: number }>>();
+    for (const product of products) {
+      const arr = byMerchant.get(product.merchantId) ?? [];
+      arr.push({ productId: product.productId, amount: product.amount });
+      byMerchant.set(product.merchantId, arr);
+    }
+
+    const results: Array<{
+      orderId: string;
+      merchantId: string;
+      merchantName: string;
+      userId: string;
+      status: string;
+      amount: number;
+      createdAt: string;
+      totalPrice: number;
+    }> = [];
+
+    await prisma.$transaction(async (tx) => {
+      for (const [merchantId, items] of byMerchant.entries()) {
+        const merchant = await tx.merchant.findUnique({ where: { merchantId } });
+        if (!merchant) throw new Error('商家不存在');
+        const addressFrom = await tx.addressInfo.findFirst({ where: { merchantId } });
+        if (!addressFrom) throw new Error('商家未配置发货地址');
+
+        // 校验商品存在且归属该商家
+        const ids = items.map((productItem) => productItem.productId);
+        const productRecords = await tx.product.findMany({ where: { productId: { in: ids } } });
+        if (productRecords.length !== ids.length) throw new Error('存在无效商品ID');
+        if (productRecords.some((prod) => prod.merchantId !== merchantId)) {
+          throw new Error('商品归属与商家不一致');
+        }
+
+        // 创建收货地址
+        const toData = await addressService.geocodeAndBuildCreateData({
+          userId,
+          name: shippingTo.name,
+          phone: shippingTo.phone,
+          address: shippingTo.address,
+        });
+        const to = await tx.addressInfo.create({ data: toData });
+
+        // 创建订单与详情
+        const order = await tx.order.create({ data: { userId, merchantId } });
+        await tx.orderDetail.create({
+          data: {
+            order: { connect: { orderId: order.orderId } },
+            addressFrom: { connect: { addressInfoId: addressFrom.addressInfoId } },
+            addressTo: { connect: { addressInfoId: to.addressInfoId } },
+          },
+        });
+        await tx.timelineItem.create({
+          data: { orderId: order.orderId, description: '用户创建订单，待商家确认' },
+        });
+
+        // 创建订单项（按amount数量）
+        await tx.orderItem.createMany({
+          data: items.map((productItem) => ({
+            orderId: order.orderId,
+            productId: productItem.productId,
+            quantity: productItem.amount,
+          })),
+        });
+
+        // 计算订单总数与价格
+        const amountTotal = items.reduce(
+          (sumQuantity, productItem) => sumQuantity + productItem.amount,
+          0
+        );
+        const priceMap = new Map(
+          productRecords.map((record) => [record.productId, Number(record.price)])
+        );
+        const totalPrice = items.reduce(
+          (sumPrice, productItem) =>
+            sumPrice + productItem.amount * (priceMap.get(productItem.productId) || 0),
+          0
+        );
+
+        results.push({
+          orderId: generateServiceId(order.orderId, ServiceKey.order),
+          merchantId: generateServiceId(merchantId, ServiceKey.merchant),
+          merchantName: merchant.name,
+          userId: generateServiceId(userId, ServiceKey.client),
+          status: '待确认',
+          amount: amountTotal,
+          createdAt: dayjs(order.createdAt).format('YYYY-MM-DD HH:mm:ss'),
+          totalPrice,
+        });
+      }
+    });
+
+    return results;
   }
 }
 
