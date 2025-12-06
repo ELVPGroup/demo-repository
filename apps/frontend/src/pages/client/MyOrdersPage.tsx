@@ -52,18 +52,18 @@ const MyOrdersPage: React.FC = () => {
     const statusMap: Record<OrderStatus, { text: string; color: string; textColor: string }> = {
       待发货: {
         text: '待发货',
-        color: orderStatusColors.pending.bg,
-        textColor: orderStatusColors.pending.text,
+        color: orderStatusColors['待发货'].bg,
+        textColor: orderStatusColors['待发货'].text,
       },
       运输中: {
         text: '运输中',
-        color: orderStatusColors.confirmed.bg,
-        textColor: orderStatusColors.confirmed.text,
+        color: orderStatusColors['运输中'].bg,
+        textColor: orderStatusColors['运输中'].text,
       },
       已完成: {
         text: '已完成',
-        color: orderStatusColors.delivered.bg,
-        textColor: orderStatusColors.delivered.text,
+        color: orderStatusColors['已完成'].bg,
+        textColor: orderStatusColors['已完成'].text,
       },
       已取消: {
         text: '已取消',
@@ -194,7 +194,7 @@ const MyOrdersPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 pt-20">
       <div className="mx-auto max-w-6xl space-y-6">
         {/* 头部区域 */}
         <div className="flex items-center justify-between">

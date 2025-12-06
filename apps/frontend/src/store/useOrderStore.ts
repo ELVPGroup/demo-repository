@@ -48,10 +48,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
 
         const requestBody = { ...params };
 
-        const res = await axiosInstance.post<OrderListResponse>(
-          side === 'client' ? '/orders' : '/orders/list',
-          requestBody
-        );
+        const res = await axiosInstance.post<OrderListResponse>('/orders/list', requestBody);
 
         // 根据后端返回的数据结构：data 是 OrderItem[] 数组
         const orders = res.data.data || [];

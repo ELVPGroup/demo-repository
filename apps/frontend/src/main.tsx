@@ -17,6 +17,7 @@ import MerchantLayout from '@/layouts/MerchantLayout.tsx';
 import ClientLayout from '@/layouts/ClientLayout.tsx';
 const MyOrdersPage = lazy(() => import('@/pages/client/MyOrdersPage.tsx'));
 const ClientOrderDetailPage = lazy(() => import('@/pages/client/OrderDetailPage.tsx'));
+const ClientProductsPage = lazy(() => import('@/pages/client/ProductsPage.tsx'));
 
 //为AntD配置样式
 import { ConfigProvider } from 'antd';
@@ -53,7 +54,8 @@ createRoot(document.getElementById('root')!).render(
             </Route>
             {/* 用户端路由 */}
             <Route path="/client" element={<ClientLayout />}>
-              <Route index element={<MyOrdersPage />} />
+              <Route index element={<ClientProductsPage />} />
+              <Route path="orders" element={<MyOrdersPage />} />
               <Route path="orders/:orderId" element={<ClientOrderDetailPage />} />
             </Route>
           </Routes>
