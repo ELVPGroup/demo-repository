@@ -10,7 +10,6 @@ import { orderModel } from '../models/orderModel.js';
 import { userModel } from '../models/userModel.js';
 import type { OrderStatus } from '../types/order.js';
 import type { Prisma } from 'generated/prisma/client.js';
-import { parseServiceId } from '@/utils/serverIdHandler.js';
 import prisma from '../db.js';
 import { addressModel } from '@/models/addressModel.js';
 import { productModel } from '@/models/productModel.js';

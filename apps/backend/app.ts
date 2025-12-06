@@ -22,7 +22,7 @@ app.use(cors());
 app.use(bodyParser());
 // 日志中间件
 app.use(
-  koaLogger((str, args) => {
+  koaLogger((str) => {
     process.stdout.write(`${dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss')}${str}`);
   })
 );
