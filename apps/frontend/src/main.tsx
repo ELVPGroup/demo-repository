@@ -11,6 +11,7 @@ const DeliveryManagementPage = lazy(() => import('@/pages/merchant/DeliveryManag
 const MerchantOrderDetailPage = lazy(() => import('@/pages/merchant/OrderDetailPage.tsx'));
 const OrdersPage = lazy(() => import('./pages/merchant/OrdersPage.tsx'));
 const ShippingPage = lazy(() => import('./pages/merchant/ShippingPage.tsx'));
+const ProductsPage = lazy(() => import('./pages/merchant/ProductsPage.tsx'));
 import MerchantLayout from '@/layouts/MerchantLayout.tsx';
 // 用户端
 import ClientLayout from '@/layouts/ClientLayout.tsx';
@@ -48,6 +49,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="orders/:orderId" element={<MerchantOrderDetailPage />} />
               <Route path="delivery-management" element={<DeliveryManagementPage />} />
               <Route path="shipping/list" element={<ShippingPage />} />
+              <Route path="products/list" element={<ProductsPage />} />
             </Route>
             {/* 用户端路由 */}
             <Route path="/client" element={<ClientLayout />}>
