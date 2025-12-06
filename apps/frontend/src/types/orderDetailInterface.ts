@@ -38,6 +38,8 @@ export interface OrderTimelineItem {
   description: string;
 }
 
+export type ShippingStatus = '待发货' | '已揽收' | '运输中' | '派送中' | '已签收';
+
 // 订单主体
 export interface OrderDetail {
   orderId: string;
@@ -48,9 +50,10 @@ export interface OrderDetail {
   amount: number;
   createdAt: string;
   totalPrice: number;
-  addressInfo: AddressInfo;
+  shippingFrom: AddressInfo;
+  shippingTo: AddressInfo;
   products: OrderProduct[];
-  shippingStatus: string;
+  shippingStatus: ShippingStatus;
   timeline: OrderTimelineItem[];
 }
 

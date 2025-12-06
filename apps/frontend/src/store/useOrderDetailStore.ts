@@ -13,9 +13,16 @@ interface OrderDetailStore {
   // actions
   fetchOrderDetail: (orderId: string) => Promise<void>;
   updateOrder: (order: OrderDetail) => Promise<void>;
-  shipOrder: (orderId: string) => Promise<void>;
+  shipOrder: (params: ShipOrderParams) => Promise<void>;
   clearOrder: () => void;
 }
+
+// 模拟发货接口请求参数类型
+export interface ShipOrderParams {
+  orderId: string;
+  logisticsId: string;
+}
+
 
 export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
   order: null,
@@ -31,7 +38,7 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
       const axiosInstance = side === 'client' ? clientAxiosInstance : merchantAxiosInstance;
       
       const res = await axiosInstance.get<OrderDetailResponse>(`/orders/detail/${orderId}`);
-      const data = res.data.data as unknown as Record<string, unknown>;
+      const data = res.data.data;
       const defaultAddr = {
         addressInfoId: '',
         name: '',
@@ -41,9 +48,11 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
       };
       const normalized = {
         ...(data as OrderDetail),
-        addressInfo:
-          (data['addressInfo'] as OrderDetail['addressInfo']) ??
-          (data['shippingTo'] as OrderDetail['addressInfo']) ??
+        shippingFrom:
+          (data['shippingFrom'] as OrderDetail['shippingFrom']) ??
+          defaultAddr,
+        shippingTo:
+          (data['shippingTo'] as OrderDetail['shippingTo']) ??
           defaultAddr,
       } as OrderDetail;
 
@@ -79,15 +88,15 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
   },
 
   // 模拟发货
-  shipOrder: async (orderId: string) => {
+  shipOrder: async (params: ShipOrderParams) => {
     set({ loading: true, error: null });
 
     try {
-      await merchantAxiosInstance.post(`/orders/${orderId}/ship`);
+      await merchantAxiosInstance.post("/shipping/send", params);
 
       // 发货成功后重新获取订单详情
-      const res = await merchantAxiosInstance.get<OrderDetailResponse>(`/orders/detail/${orderId}`);
-      const data = res.data.data as unknown as Record<string, unknown>;
+      const res = await merchantAxiosInstance.get<OrderDetailResponse>(`/orders/detail/${params.orderId}`);
+      const data = res.data.data;
       const defaultAddr = {
         addressInfoId: '',
         name: '',
@@ -97,9 +106,11 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
       };
       const normalized = {
         ...(data as OrderDetail),
-        addressInfo:
-          (data['addressInfo'] as OrderDetail['addressInfo']) ??
-          (data['shippingTo'] as OrderDetail['addressInfo']) ??
+        shippingFrom:
+          (data['shippingFrom'] as OrderDetail['shippingFrom']) ??
+          defaultAddr,
+        shippingTo:
+          (data['shippingTo'] as OrderDetail['shippingTo']) ??
           defaultAddr,
       } as OrderDetail;
 

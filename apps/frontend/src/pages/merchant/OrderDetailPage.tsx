@@ -10,14 +10,20 @@ import { Plus, Minus } from 'lucide-react';
 
 import { useOrderDetailStore } from '@/store/useOrderDetailStore';
 import RouteMap from '@/components/RouteMap'; // 导入RouteMap组件
+import { orderStatusColors } from '@/theme/theme';
+import type { ShipOrderParams } from '@/store/useOrderDetailStore';
 
 const OrderDetailPage = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const [editVisible, setEditVisible] = useState(false);
+  const [shipModalVisible, setShipModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [shipForm] = Form.useForm();
 
   const { order, loading, error, fetchOrderDetail, updateOrder, shipOrder } = useOrderDetailStore();
+
+  const buttonStyle = orderStatusColors[order?.status as keyof typeof orderStatusColors]|| orderStatusColors.default;
 
   useEffect(() => {
     if (orderId) {
@@ -32,11 +38,11 @@ const OrderDetailPage = () => {
       form.setFieldsValue({
         amount: order.amount,
         totalPrice: order.totalPrice,
-        addressInfoId: order.addressInfo?.addressInfoId,
-        name: order.addressInfo?.name,
-        phone: order.addressInfo?.phone,
-        address: order.addressInfo?.address,
-        location: order.addressInfo?.location || [0, 0],
+        
+        name: order.shippingTo?.name,
+        phone: order.shippingTo?.phone,
+        address: order.shippingTo?.address,
+        location: order.shippingTo?.location || [0, 0],
         products: order.products || [],
       });
     }
@@ -48,12 +54,12 @@ const OrderDetailPage = () => {
 
     // 如果订单已送达，使用收货地址作为当前位置
     if (order.status === '已签收' || order.status === 'delivered') {
-      return order.shippingTo?.location || order.addressInfo?.location;
+      return order.shippingTo?.location || order.shippingTo?.location;
     }
 
     // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
     if (order.status === '运输中' || order.status === '已发货') {
-      return order.shippingFrom?.location || order.addressInfo?.location;
+      return order.shippingFrom?.location || order.shippingFrom?.location;
     }
 
     // 默认使用发货地址
@@ -70,7 +76,7 @@ const OrderDetailPage = () => {
         ...order,
         amount: values.amount,
         totalPrice: values.totalPrice,
-        addressInfo: {
+        shippingTo: {
           addressInfoId: values.addressInfoId,
           name: values.name,
           phone: values.phone,
@@ -88,14 +94,44 @@ const OrderDetailPage = () => {
     }
   };
 
+  // 打开发货弹窗
+  const handleOpenShipModal = () => {
+    setShipModalVisible(true);
+    shipForm.resetFields();
+  };
+
+  // 关闭发货弹窗
+  const handleCloseShipModal = () => {
+    setShipModalVisible(false);
+    shipForm.resetFields();
+  };
+
+  // 提交发货
   const handleShipOrder = async () => {
     if (!orderId) return;
-
+    
     try {
-      await shipOrder(orderId);
+      const values = await shipForm.validateFields();
+      const params: ShipOrderParams = {
+        orderId: orderId,
+        logisticsId: values.logisticsId,
+      };
+      
+      await shipOrder(params);
       message.success('订单发货成功');
-    } catch (err) {
-      message.error('发货失败，请重试');
+      handleCloseShipModal();
+      // shipOrder 方法内部已经会自动重新获取订单详情
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'errorFields' in err) {
+        // 表单验证错误，不需要显示错误消息
+        return;
+      }
+      const errorMessage = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : err instanceof Error
+          ? err.message
+          : '发货失败，请重试';
+      message.error(errorMessage);
     }
   };
 
@@ -105,6 +141,36 @@ const OrderDetailPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
+
+      {/* 发货弹窗 */}
+      <Modal
+        title="订单发货"
+        open={shipModalVisible}
+        onCancel={handleCloseShipModal}
+        onOk={handleShipOrder}
+        okText="确认发货"
+        cancelText="取消"
+        confirmLoading={loading}
+        width={500}
+      >
+        <Form form={shipForm} layout="vertical" style={{ marginTop: 20 }}>
+          <Form.Item
+            label="物流ID"
+            name="logisticsId"
+            rules={[
+              { required: true, message: '请输入物流ID' },
+              { min: 1, message: '物流ID不能为空' },
+            ]}
+          >
+            <Input placeholder="请输入物流ID" />
+          </Form.Item>
+          <div style={{ marginTop: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+            <div style={{ fontSize: 12, color: '#666' }}>
+              提示：请输入物流单号，发货后将自动更新订单状态
+            </div>
+          </div>
+        </Form>
+      </Modal>
 
       {/* 编辑订单信息模态框 */}
       <Modal
@@ -123,14 +189,6 @@ const OrderDetailPage = () => {
         <Form form={form} layout="vertical" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
           {/* 订单金额信息 */}
           <Card size="small" title="订单金额" style={{ marginBottom: 16 }}>
-            <Form.Item
-              label="数量"
-              name="amount"
-              rules={[{ required: true, message: '请输入数量' }]}
-            >
-              <InputNumber min={0} style={{ width: '100%' }} />
-            </Form.Item>
-
             <Form.Item
               label="总价"
               name="totalPrice"
@@ -168,26 +226,6 @@ const OrderDetailPage = () => {
               rules={[{ required: true, message: '请输入详细地址' }]}
             >
               <Input.TextArea rows={2} placeholder="详细地址" />
-            </Form.Item>
-
-            <Form.Item label="位置坐标" required>
-              <Space>
-                <Form.Item
-                  name={['location', 0]}
-                  rules={[{ required: true, message: '请输入经度' }]}
-                  noStyle
-                >
-                  <InputNumber placeholder="经度" style={{ width: 150 }} />
-                </Form.Item>
-                <span>，</span>
-                <Form.Item
-                  name={['location', 1]}
-                  rules={[{ required: true, message: '请输入纬度' }]}
-                  noStyle
-                >
-                  <InputNumber placeholder="纬度" style={{ width: 150 }} />
-                </Form.Item>
-              </Space>
             </Form.Item>
           </Card>
 
@@ -275,9 +313,6 @@ const OrderDetailPage = () => {
         </Form>
       </Modal>
 
-      {/* 错误提示 */}
-      {error && <Alert title="Error" description={error} type="error" showIcon />}
-
       <main className="ml-60 px-10 py-6">
         <div className="flex flex-row justify-between gap-4">
           <TopBar title={`订单详情 - ${orderId || ''}`} />
@@ -304,11 +339,10 @@ const OrderDetailPage = () => {
                 type="primary"
                 danger
                 icon={<Truck size={18} />}
-                onClick={handleShipOrder}
+                onClick={handleOpenShipModal}
                 disabled={loading}
-                loading={loading}
               >
-                模拟发货
+                发货
               </Button>
             )}
           </div>
@@ -400,7 +434,7 @@ const OrderDetailPage = () => {
                         console.log('地图缩放级别:', zoom);
                       }}
                     />
-                  ) : order.addressInfo?.address ? (
+                  ) : order.shippingTo?.address ? (
                     // 如果没有发货地址，但有一个收货地址，可以显示从默认位置到收货地址的路线
                     <RouteMap
                       startLocation={{
@@ -408,8 +442,8 @@ const OrderDetailPage = () => {
                         coords: [114.305539, 30.593175], // 默认发货坐标
                       }}
                       endLocation={{
-                        name: order.addressInfo.address,
-                        coords: order.addressInfo.location || [114.872389, 30.453667],
+                        name: order.shippingTo.address,
+                        coords: order.shippingTo.location || [114.872389, 30.453667],
                       }}
                       currentLocation={getCurrentLocation()}
                       showControls={true}
@@ -460,42 +494,17 @@ const OrderDetailPage = () => {
                       {order.createdAt ? new Date(order.createdAt).toLocaleString('zh-CN') : '-'}
                     </span>
                   </div>
+
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">订单状态</span>
                     <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        order.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : order.status === 'confirmed'
-                            ? 'bg-blue-100 text-blue-700'
-                            : order.status === 'delivered'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {order.status === 'pending'
-                        ? '待处理'
-                        : order.status === 'confirmed'
-                          ? '已确认'
-                          : order.status === 'delivered'
-                            ? '已送达'
-                            : order.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">发货状态</span>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        order.shippingStatus === '待发货'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : order.shippingStatus === '已揽收'
-                            ? 'bg-blue-100 text-blue-700'
-                            : order.shippingStatus === '运输中'
-                              ? 'bg-blue-100 text-blue-700'
-                              : order.shippingStatus === '已签收'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-700'
-                      }`}
+                      className="rounded-full px-3 py-1 text-xs font-semibold"
+                      style = {{
+                          backgroundColor: buttonStyle.bg,
+                          color: buttonStyle.text,
+                          border: buttonStyle.border,
+                      }}
+                      
                     >
                       {order.shippingStatus || '未知'}
                     </span>
