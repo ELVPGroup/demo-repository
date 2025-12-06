@@ -9,14 +9,14 @@ export interface OrderQueryParams {
   sortBy?: string;
 }
 
-export type OrderStatus = 'pending' | 'confirmed' | 'delivered';
+export type OrderStatus = '待发货' | '运输中' | '已完成';
 
 export interface OrderItem {
   orderId: string;
   merchantId: string;
   userId: string;
   userName: string;
-  status: OrderStatus; // "待发货" | "已发货" | "已完成" | ...
+  status: OrderStatus;
   amount: number;
   createdAt: string;
   totalPrice: number;
