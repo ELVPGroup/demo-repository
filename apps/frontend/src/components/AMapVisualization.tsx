@@ -90,7 +90,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   const [routePath, setRoutePath] = useState<LngLat[]>([]);
 
   // 轨迹动画
-  const startRouteAnimation = (AMap: any, map: any, path: LngLat[]) => {
+  const startRouteAnimation = (AMap: any, map: any, path: LngLat[], currentLocation?: LngLat) => {
     if (!path.length || !animateRoute) return;
 
     // 清除之前的动画
@@ -101,9 +101,27 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       map.remove(movingMarkerRef.current);
     }
 
-    // 创建移动的圆点标记
+    // 先根据 currentLoc 找到起始索引（若提供），否则从 0 开始
+    let startIndex = 0;
+    if (currentLocation) {
+      let minDist = Infinity;
+      let minIdx = 0;
+      for (let i = 0; i < path.length; i++) {
+        const dx = path[i][0] - currentLocation[0];
+        const dy = path[i][1] - currentLocation[1];
+        const d = dx * dx + dy * dy;
+        if (d < minDist) {
+          minDist = d;
+          minIdx = i;
+        }
+      }
+      startIndex = minIdx;
+    }
+
+    // 创建移动的圆点标记（从计算的起始位置开始）
+    const initialPos = path[Math.max(0, Math.min(path.length - 1, startIndex))];
     const movingMarker = new AMap.Marker({
-      position: path[0],
+      position: initialPos,
       icon: new AMap.Icon({
         size: new AMap.Size(20, 20),
         image:
@@ -116,15 +134,15 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
     map.add(movingMarker);
     movingMarkerRef.current = movingMarker;
 
-    // 计算中间位置（大约在路线的1/3处）
-    const middleIndex = Math.floor(path.length * 0.3);
+    // 计算中间位置,走到的位置
+    const middleIndex = startIndex;
 
-    let currentIndex = 0;
-    const totalSteps = middleIndex;
+    let currentIndex = startIndex;
+    const totalSteps = Math.max(1, middleIndex - startIndex);
     const animationDuration = 3000;
 
     const animate = () => {
-      if (currentIndex <= totalSteps) {
+      if (currentIndex <= middleIndex) {
         const currentPoint = path[currentIndex];
         movingMarker.setPosition(currentPoint);
         currentIndex++;
@@ -317,9 +335,9 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
 
             map.add(polyline);
 
-            // 开始动画
+            // 开始动画（传入当前定位以便从当前位置开始）
             setTimeout(() => {
-              startRouteAnimation(AMap, map, path);
+              startRouteAnimation(AMap, map, path, currentLocation);
             }, 1000);
 
             map.setFitView();
@@ -340,7 +358,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
             map.add(polyline);
 
             setTimeout(() => {
-              startRouteAnimation(AMap, map, simulatedPath);
+              startRouteAnimation(AMap, map, simulatedPath, currentLocation);
             }, 1000);
 
             map.setFitView();

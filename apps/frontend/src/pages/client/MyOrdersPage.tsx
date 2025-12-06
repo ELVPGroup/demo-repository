@@ -49,21 +49,21 @@ const MyOrdersPage: React.FC = () => {
 
   // 状态映射
   const getStatusConfig = (status: OrderStatus) => {
-    const statusMap: Record<OrderStatus, { text: string; color: string; textColor: string }> = {
-      待发货: {
+    const statusMap: Record<OrderStatus | '已取消', { text: string; color: string; textColor: string }> = {
+      '待发货': {
         text: '待发货',
-        color: orderStatusColors.pending.bg,
-        textColor: orderStatusColors.pending.text,
+        color: orderStatusColors['待发货']?.bg || orderStatusColors.default.bg,
+        textColor: orderStatusColors['待发货']?.text || orderStatusColors.default.text,
       },
-      运输中: {
+      '运输中': {
         text: '运输中',
-        color: orderStatusColors.confirmed.bg,
-        textColor: orderStatusColors.confirmed.text,
+        color: orderStatusColors['运输中']?.bg || orderStatusColors.default.bg,
+        textColor: orderStatusColors['运输中']?.text || orderStatusColors.default.text,
       },
-      已完成: {
+      '已完成': {
         text: '已完成',
-        color: orderStatusColors.delivered.bg,
-        textColor: orderStatusColors.delivered.text,
+        color: orderStatusColors['已完成']?.bg || orderStatusColors.default.bg,
+        textColor: orderStatusColors['已完成']?.text || orderStatusColors.default.text,
       },
       已取消: {
         text: '已取消',

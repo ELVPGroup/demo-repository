@@ -21,6 +21,8 @@ const MerchantDashboard: React.FC = () => {
   
   // 使用防抖ref
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // track last center used to generate random locations to avoid regenerating on unrelated updates
+  const lastCenterRef = useRef<[number, number] | null>(null);
   
   // 使用配送区域store
   const { 
@@ -114,30 +116,42 @@ const MerchantDashboard: React.FC = () => {
 
   // 初始化订单数据（基于当前center）
   useEffect(() => {
-    if (center) {
-      const RANDOM_LOCATIONS = generateRandomLocations(center, 30, 30);
-      
-      const initialOrders: Order[] = RANDOM_LOCATIONS.map((location, index) => {
-        const distance = calculateDistance(center, location);
+    const center = deliveryArea?.center;
+    if (!center) return;
 
-        return {
-          id: `ORD${String(index + 1).padStart(4, '0')}`,
-          customerName: `客户${index + 1}`,
-          address: `某区某街道${index + 1}号`,
-          location: { x: location[0], y: location[1] },
-          distance,
-          estimatedTime: 0,
-          status: OrderStatus.OUT_OF_RANGE,
-        };
-      });
-
-      setOrders(initialOrders);
+    // 如果中心坐标没有变化，则不要重新生成随机点（避免修改半径等操作触发）
+    if (lastCenterRef.current && lastCenterRef.current[0] === center[0] && lastCenterRef.current[1] === center[1]) {
+      return;
     }
-  }, [center]);
+
+    // 记录本次用于生成的中心
+    lastCenterRef.current = center;
+
+    const RANDOM_LOCATIONS = generateRandomLocations(center, 30, 200);
+
+    const initialOrders: Order[] = RANDOM_LOCATIONS.map((location, index) => {
+      const distance = calculateDistance(center, location);
+
+      return {
+        id: `ORD${String(index + 1).padStart(4, '0')}`,
+        customerName: `客户${index + 1}`,
+        address: `某区某街道${index + 1}号`,
+        location: { x: location[0], y: location[1] },
+        distance,
+        estimatedTime: 0,
+        status: OrderStatus.OUT_OF_RANGE,
+      };
+    });
+
+    setOrders(initialOrders);
+  }, [deliveryArea?.center]);
 
   // --- Logic: Recalculate Order Statuses ---
   useEffect(() => {
     if (orders.length === 0) return;
+
+    // 使用实际生效的半径：优先使用 deliveryArea 中的值，否则使用本地 state radius
+    const activeRadius = deliveryArea?.radius ?? radius;
 
     const updatedOrders = orders.map((order) => {
       const distance = order.distance;
@@ -145,13 +159,14 @@ const MerchantDashboard: React.FC = () => {
 
       let status = OrderStatus.OUT_OF_RANGE;
 
-      if (distance <= radius) {
-        if (time > 90) {
+      if (distance <= activeRadius) {
+        if (time > 1000) {
           status = OrderStatus.TIME_RISK;
         } else {
           status = OrderStatus.DELIVERABLE;
         }
       }
+      console.log('变动半径订单状态', stats)
 
       return {
         ...order,
@@ -161,7 +176,7 @@ const MerchantDashboard: React.FC = () => {
     });
 
     setOrders(updatedOrders);
-  }, [radius, currentProvider, orders.length]);
+  }, [radius, deliveryArea?.radius, currentProvider, orders.length]);
 
   // --- Stats Calculation ---
   const stats: DashboardStats = useMemo(() => {
@@ -286,7 +301,7 @@ const MerchantDashboard: React.FC = () => {
                 <input
                   type="range"
                   min="1"
-                  max="50"
+                  max="1000"
                   step="0.1"
                   value={currentRadius}
                   onChange={(e) => handleRadiusChange(parseFloat(e.target.value))}
@@ -303,7 +318,7 @@ const MerchantDashboard: React.FC = () => {
               
               <div className="mt-2 flex justify-between text-xs text-gray-400">
                 <span>1 km</span>
-                <span>50 km</span>
+                <span>1000 km</span>
               </div>
 
               <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
