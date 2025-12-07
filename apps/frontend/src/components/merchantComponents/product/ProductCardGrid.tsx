@@ -17,7 +17,8 @@ export default function ProductCardGrid(props: ProductCardGridProps) {
       {products.map((product) => (
         <Col key={product.productId} xs={24} sm={12} md={8} lg={6} xl={6}>
           <Card
-            hoverable
+            className="overflow-hidden"
+            variant="borderless"
             cover={
               product.imageUrl ? (
                 <Image
@@ -61,13 +62,15 @@ export default function ProductCardGrid(props: ProductCardGridProps) {
                 {product.name}
               </Typography.Title>
               {product.description ? (
-                <Typography.Paragraph ellipsis={{ rows: 2 }} style={{ margin: 0 }}>
+                <Typography.Paragraph ellipsis={{ rows: 1 }} style={{ margin: 0 }}>
                   {product.description}
                 </Typography.Paragraph>
               ) : null}
               <Space>
                 <Tag color="blue">¥{Number(product.price).toFixed(2)}</Tag>
-                <Tag color="green">库存 {Number(product.amount)}</Tag>
+                <Tag color={product.amount > 5 ? 'green' : 'red'}>
+                  库存 {Number(product.amount)}
+                </Tag>
               </Space>
             </Space>
           </Card>
