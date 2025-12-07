@@ -20,8 +20,8 @@ import { getDictName, orderStatusDict, shippingStatusDict } from '@/utils/dicts.
 import {
   getDefinedKeyValues,
   haversineDistanceMeters,
-  METERS_PER_DEGREE_LAT,
-  metersPerDegreeLonAtLat,
+  // METERS_PER_DEGREE_LAT,
+  // metersPerDegreeLonAtLat,
   parseAmapPolyline,
   kmhToMps,
 } from '@/utils/general.js';
@@ -154,22 +154,22 @@ export class OrderService {
     const centerLat = Number(deliveryArea.latitude);
     const radiusMeters = Number(deliveryArea.radius);
 
-    // 根据半径计算纬度方向上的最大偏移量
-    const latDelta = radiusMeters / METERS_PER_DEGREE_LAT;
-    // 根据当前纬度计算经度方向上的最大偏移量（经度1°长度随纬度变化）
-    const lonDelta = radiusMeters / metersPerDegreeLonAtLat(centerLat);
+    // // 根据半径计算纬度方向上的最大偏移量
+    // const latDelta = radiusMeters / METERS_PER_DEGREE_LAT;
+    // // 根据当前纬度计算经度方向上的最大偏移量（经度1°长度随纬度变化）
+    // const lonDelta = radiusMeters / metersPerDegreeLonAtLat(centerLat);
 
-    // 先使用矩形边界做粗筛，减少后续精确计算量
-    where['detail'] = {
-      is: {
-        addressTo: {
-          is: {
-            longitude: { gte: centerLon - lonDelta, lte: centerLon + lonDelta },
-            latitude: { gte: centerLat - latDelta, lte: centerLat + latDelta },
-          },
-        },
-      },
-    };
+    // // 先使用矩形边界做粗筛，减少后续精确计算量
+    // where['detail'] = {
+    //   is: {
+    //     addressTo: {
+    //       is: {
+    //         longitude: { gte: centerLon - lonDelta, lte: centerLon + lonDelta },
+    //         latitude: { gte: centerLat - latDelta, lte: centerLat + latDelta },
+    //       },
+    //     },
+    //   },
+    // };
 
     ordersRaw = (await orderModel.findMany({
       where,
@@ -179,12 +179,12 @@ export class OrderService {
       include: areaOrderModelFindInclude,
     })) as AreaOrderListPayload[];
 
-    ordersRaw = ordersRaw.filter((o) => {
-      const to = o.detail?.addressTo;
-      if (!to) return false;
-      const d = haversineDistanceMeters([centerLon, centerLat], [to.longitude, to.latitude]);
-      return d <= radiusMeters;
-    });
+    // ordersRaw = ordersRaw.filter((o) => {
+    //   const to = o.detail?.addressTo;
+    //   if (!to) return false;
+    //   const d = haversineDistanceMeters([centerLon, centerLat], [to.longitude, to.latitude]);
+    //   return d <= radiusMeters;
+    // });
 
     return ordersRaw.map((order) => {
       const to = order.detail?.addressTo;
