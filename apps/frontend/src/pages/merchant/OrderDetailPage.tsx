@@ -425,6 +425,8 @@ const OrderDetailPage = () => {
                       currentLocation={getCurrentLocation()}
                       showControls={true}
                       showInfoCard={true}
+                      distance={order.distance}
+                      estimatedTime={order.estimatedTime}
                       showProgressIndicator={true}
                       className="h-full"
                       onMapClick={(coords) => {

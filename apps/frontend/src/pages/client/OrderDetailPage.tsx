@@ -119,6 +119,8 @@ const OrderDetailPage = () => {
                       status={order.status}
                       currentLocation={getCurrentLocation()}
                       showControls={true}
+                      distance={order.distance}
+                      estimatedTime={order.estimatedTime}
                       showInfoCard={true}
                       showProgressIndicator={true}
                       className="h-full"

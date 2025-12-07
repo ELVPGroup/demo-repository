@@ -3,9 +3,31 @@ import { create } from "zustand";
 import { merchantAxiosInstance } from "@/utils/axios";
 import type { DeliveryAreaData, DeliveryAreaResponse } from "@/types/delivery";
 
+// 供应商数据类型
+interface LogisticsSupplier {
+  logisticsId: string;
+  name: string;
+  speed: number;
+  variance: number;
+}
+
+// 供应商列表响应类型
+interface LogisticsSuppliersResponse {
+  title: string;
+  status: number;
+  message: string;
+  data: LogisticsSupplier[];
+}
+
 interface DeliveryAreaStore {
   // 配送区域数据
   deliveryArea: DeliveryAreaData | null;
+  
+  // 供应商列表
+  logisticsSuppliers: LogisticsSupplier[];
+  
+  // 供应商加载状态
+  suppliersLoading: boolean;
   
   // 加载状态
   loading: boolean;
@@ -18,6 +40,9 @@ interface DeliveryAreaStore {
   
   // 获取配送区域信息
   fetchDeliveryArea: (merchantId?: string) => Promise<void>;
+  
+  // 获取供应商列表
+  fetchLogisticsSuppliers: () => Promise<LogisticsSupplier[]>;
   
   // 更新配送区域（完整更新）
   updateDeliveryArea: (data: Partial<DeliveryAreaData>) => Promise<boolean>;
@@ -40,72 +65,121 @@ const DEFAULT_RADIUS = 5;
 
 export const useDeliveryAreaStore = create<DeliveryAreaStore>((set, get) => ({
   deliveryArea: null,
+  logisticsSuppliers: [],
+  suppliersLoading: false,
   loading: false,
   updating: false,
   error: null,
 
- // src/store/useDeliveryAreaStore.ts - 修改fetchDeliveryArea方法
+  // src/store/useDeliveryAreaStore.ts - 修改fetchDeliveryArea方法
   fetchDeliveryArea: async (merchantId?: string) => {
-  set({ loading: true, error: null });
-  
-  try {
-    // 方法1：使用GET方法（推荐）
-    const res = await merchantAxiosInstance.get<DeliveryAreaResponse>(
-      "/delivery-area"
-    );
+    set({ loading: true, error: null });
     
-    // 或者方法2：如果需要在URL中传递参数
-    // const url = merchantId 
-    //   ? `/merchant/delivery-area?merchantId=${merchantId}`
-    //   : "/merchant/delivery-area";
-    // const res = await merchantAxiosInstance.get<DeliveryAreaResponse>(url);
-    
-    console.log("配送区域接口响应:", res.data);
-    
-    if (res.data.status === 200 && res.data.data) {
-      set({
-        deliveryArea: res.data.data,
-        error: null,
-      });
-      return true;
-    } else {
-      console.warn("获取配送区域失败:", res.data.message);
+    try {
+      // 使用GET方法获取配送区域
+      const res = await merchantAxiosInstance.get<DeliveryAreaResponse>(
+        "/delivery-area"
+      );
+      
+      // 如果需要在URL中传递参数
+      // const url = merchantId 
+      //   ? `/merchant/delivery-area?merchantId=${merchantId}`
+      //   : "/merchant/delivery-area";
+      // const res = await merchantAxiosInstance.get<DeliveryAreaResponse>(url);
+      
+      console.log("配送区域接口响应:", res.data);
+      
+      if (res.data.status === 200 && res.data.data) {
+        set({
+          deliveryArea: res.data.data,
+          error: null,
+        });
+        return true;
+      } else {
+        console.warn("获取配送区域失败:", res.data.message);
+        set({
+          deliveryArea: {
+            merchantId: merchantId || "default",
+            center: DEFAULT_CENTER,
+            radius: DEFAULT_RADIUS,
+          },
+          error: res.data.message || "获取配送区域失败",
+        });
+        return false;
+      }
+    } catch (err: unknown) {
+      console.error("获取配送区域信息失败:", err);
+      
+      let errorMessage = "获取配送区域失败";
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String((err as { message: unknown }).message);
+      }
+      
       set({
         deliveryArea: {
           merchantId: merchantId || "default",
           center: DEFAULT_CENTER,
           radius: DEFAULT_RADIUS,
         },
-        error: res.data.message || "获取配送区域失败",
+        error: errorMessage,
       });
       return false;
+    } finally {
+      set({ loading: false });
     }
-  } catch (err: unknown) {
-    console.error("获取配送区域信息失败:", err);
+  },
+
+  // 新增：获取供应商列表
+  fetchLogisticsSuppliers: async () => {
+    set({ suppliersLoading: true, error: null });
     
-    let errorMessage = "获取配送区域失败";
-    
-    if (err instanceof Error) {
-      errorMessage = err.message;
-    } else if (typeof err === 'string') {
-      errorMessage = err;
-    } else if (err && typeof err === 'object' && 'message' in err) {
-      errorMessage = String((err as { message: unknown }).message);
+    try {
+      // 调用后端API获取供应商列表
+      const res = await merchantAxiosInstance.get<LogisticsSuppliersResponse>(
+        "/logistics-provider" 
+      );
+      
+      console.log("供应商列表接口响应:", res.data);
+      
+      if (res.data.status === 200 && res.data.data) {
+        set({
+          logisticsSuppliers: res.data.data,
+          error: null,
+        });
+        return res.data.data;
+      } else {
+        console.warn("获取供应商列表失败:", res.data.message);
+        set({
+          error: res.data.message || "获取供应商列表失败",
+        });
+        return [];
+      }
+    } catch (err: unknown) {
+      console.error("获取供应商列表失败:", err);
+      
+      let errorMessage = "获取供应商列表失败";
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String((err as { message: unknown }).message);
+      }
+      
+      set({
+        error: errorMessage,
+      });
+      return [];
+    } finally {
+      set({ suppliersLoading: false });
     }
-    
-    set({
-      deliveryArea: {
-        merchantId: merchantId || "default",
-        center: DEFAULT_CENTER,
-        radius: DEFAULT_RADIUS,
-      },
-      error: errorMessage,
-    });
-    return false;
-  } finally {
-    set({ loading: false });
-  }
-},
+  },
 
   updateDeliveryArea: async (data: Partial<DeliveryAreaData>) => {
     set({ updating: true, error: null });
@@ -116,20 +190,28 @@ export const useDeliveryAreaStore = create<DeliveryAreaStore>((set, get) => ({
         throw new Error("未获取到配送区域数据");
       }
       
-      // 合并当前数据和更新数据
+      // 合并当前数据和更新数据（使用 nullish 合并避免将 0 视为缺失）
       const updateData = {
-        center: data.center || currentData.center,
-        radius: data.radius || currentData.radius,
+        center: data.center ?? currentData.center,
+        radius: data.radius ?? currentData.radius,
       };
-      
-      // 如果需要格式化坐标到6位小数
-      const formatCoordinates = (coords: [number, number]): [number, number] => {
+
+      // 如果需要格式化坐标到6位小数，同时对非法输入做容错
+      const formatCoordinates = (coords?: [number, number]) : [number, number] => {
+        if (!coords || !Array.isArray(coords) || coords.length < 2) {
+          // 回退到默认中心，避免抛出错误
+          return DEFAULT_CENTER;
+        }
+
+        const lon = typeof coords[0] === 'number' ? coords[0] : DEFAULT_CENTER[0];
+        const lat = typeof coords[1] === 'number' ? coords[1] : DEFAULT_CENTER[1];
+
         return [
-          parseFloat(coords[0].toFixed(6)),
-          parseFloat(coords[1].toFixed(6))
+          parseFloat(lon.toFixed(6)),
+          parseFloat(lat.toFixed(6)),
         ];
       };
-      
+
       const formattedUpdateData = {
         ...updateData,
         center: formatCoordinates(updateData.center),
@@ -323,7 +405,9 @@ export const useDeliveryAreaStore = create<DeliveryAreaStore>((set, get) => ({
   reset: () => {
     set({
       deliveryArea: null,
+      logisticsSuppliers: [],
       loading: false,
+      suppliersLoading: false,
       updating: false,
       error: null,
     });
