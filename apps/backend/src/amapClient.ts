@@ -58,7 +58,8 @@ class AMapClient {
     const status = (data as AMapBaseResponse).status;
     if (status !== '1') {
       const info = (data as AMapBaseResponse).info || 'unknown';
-      throw new Error('AMap error: ' + info);
+      console.error('AMap error: ' + info + ' path: ' + path);
+      throw new Error('请输入有效的地址');
     }
     return data;
   }

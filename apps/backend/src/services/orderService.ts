@@ -221,7 +221,7 @@ export class OrderService {
    * 商家创建订单
    */
   async createOrder(payload: CreateOrderPayload) {
-    const { userId, merchantId, shippingFromId, shippingTo, items, description } = payload;
+    const { userId, merchantId, shippingFromId, shippingToId, items, description } = payload;
 
     const addressFrom = await addressModel.findById(shippingFromId);
     if (!addressFrom) {
@@ -229,6 +229,13 @@ export class OrderService {
     }
     if (addressFrom.merchantId !== merchantId) {
       throw new Error('没有权限使用该发货地址');
+    }
+    const addressTo = await addressModel.findById(shippingToId);
+    if (!addressTo) {
+      throw new Error('收货地址不存在');
+    }
+    if (addressTo.userId !== userId) {
+      throw new Error('收货地址与用户不匹配');
     }
     if (!items || items.length === 0) {
       throw new Error('订单项不能为空');
@@ -242,14 +249,6 @@ export class OrderService {
     // 使用事务保证数据正确建立
     const result = await prisma.$transaction(async (tx) => {
       // 创建收货地址并存储
-      const toData = await addressService.geocodeAndBuildCreateData({
-        userId,
-        name: shippingTo.name,
-        phone: shippingTo.phone,
-        address: shippingTo.address,
-      });
-      const to = await tx.addressInfo.create({ data: toData });
-
       const order = await tx.order.create({
         data: {
           userId,
@@ -261,7 +260,7 @@ export class OrderService {
         data: {
           order: { connect: { orderId: order.orderId } },
           addressFrom: { connect: { addressInfoId: addressFrom.addressInfoId } },
-          addressTo: { connect: { addressInfoId: to.addressInfoId } },
+          addressTo: { connect: { addressInfoId: addressTo.addressInfoId } },
         },
       });
 
@@ -550,187 +549,74 @@ export class OrderService {
   }
 
   /**
-   * 客户端创建订单：根据收货地址与商品列表创建订单
-   * - 校验所有商品属于同一商家
-   * - 使用该商家的一个发货地址作为发货地
-   * - 初始状态为 PENDING
-   * - 返回满足前端契约的简化数据
-   */
-  async createOrderByClient(payload: {
-    userId: number;
-    shippingTo: { name: string; phone: string; address: string };
-    products: Array<{ productId: number; merchantId: number }>;
-  }) {
-    const { userId, shippingTo, products } = payload;
-    const merchantId = products[0]!.merchantId;
-
-    // 校验所有商品存在且归属商家
-    const productIds = products.map((p) => p.productId);
-    const productRecords = await prisma.product.findMany({
-      where: { productId: { in: productIds } },
-    });
-    if (productRecords.length !== productIds.length) {
-      throw new Error('存在无效商品ID');
-    }
-    if (productRecords.some((prod) => prod.merchantId !== merchantId)) {
-      throw new Error('商品归属与商家不一致');
-    }
-    const merchant = await prisma.merchant.findUnique({ where: { merchantId } });
-    if (!merchant) throw new Error('商家不存在');
-    // 选择商家一个发货地址
-    const addressFrom = await prisma.addressInfo.findFirst({ where: { merchantId } });
-    if (!addressFrom) throw new Error('商家未配置发货地址');
-
-    const created = await prisma.$transaction(async (tx) => {
-      // 创建收货地址（客户端收货地址）
-      const toData = await addressService.geocodeAndBuildCreateData({
-        userId,
-        name: shippingTo.name,
-        phone: shippingTo.phone,
-        address: shippingTo.address,
-      });
-      const to = await tx.addressInfo.create({ data: toData });
-
-      // 创建订单
-      const order = await tx.order.create({ data: { userId, merchantId } });
-      // 订单详情
-      await tx.orderDetail.create({
-        data: {
-          order: { connect: { orderId: order.orderId } },
-          addressFrom: { connect: { addressInfoId: addressFrom.addressInfoId } },
-          addressTo: { connect: { addressInfoId: to.addressInfoId } },
-        },
-      });
-      // 时间线（待商家确认）
-      await tx.timelineItem.create({
-        data: {
-          orderId: order.orderId,
-          description: '用户创建订单，待商家确认',
-        },
-      });
-      // 订单项（默认数量 1）
-      await tx.orderItem.createMany({
-        data: productIds.map((pid) => ({ orderId: order.orderId, productId: pid, quantity: 1 })),
-      });
-
-      return order;
-    });
-
-    return {
-      orderId: generateServiceId(created.orderId, ServiceKey.order),
-      merchantId: generateServiceId(merchantId, ServiceKey.merchant),
-      merchantName: merchant.name,
-      userId: generateServiceId(userId, ServiceKey.client),
-      status: '待确认',
-      amount: 0,
-      createdAt: dayjs(created.createdAt).format('YYYY-MM-DD HH:mm:ss'),
-      totalPrice: 0,
-    };
-  }
-
-  /**
    * 客户端创建订单（支持多商家）：按 merchantId 分组分别创建订单
-   * products: [{ productId, merchantId, amount }]
+   * merchantGroups: [{ merchantId, items: [{ productId, quantity }] }]
    */
   async createOrdersByClient(payload: {
     userId: number;
-    shippingTo: { name: string; phone: string; address: string };
-    products: Array<{ productId: number; merchantId: number; amount: number }>;
+    addressInfoId: number;
+    merchantGroups: Array<{
+      merchantId: number;
+      items: Array<{ productId: number; quantity: number }>;
+    }>;
   }) {
-    const { userId, shippingTo, products } = payload;
-    // 按商家分组商品
-    const byMerchant = new Map<number, Array<{ productId: number; amount: number }>>();
-    for (const product of products) {
-      const arr = byMerchant.get(product.merchantId) ?? [];
-      arr.push({ productId: product.productId, amount: product.amount });
-      byMerchant.set(product.merchantId, arr);
+    console.log(payload);
+    const { userId, addressInfoId, merchantGroups } = payload;
+
+    const user = await prisma.user.findUnique({
+      where: { userId },
+    });
+    if (!user) {
+      throw new Error('用户不存在');
     }
 
-    const results: Array<{
-      orderId: string;
-      merchantId: string;
-      merchantName: string;
-      userId: string;
-      status: string;
-      amount: number;
-      createdAt: string;
-      totalPrice: number;
+    const addressInfo = await prisma.addressInfo.findUnique({
+      where: { addressInfoId },
+    });
+    if (!addressInfo) {
+      throw new Error('收货地址无效');
+    }
+
+    const createdOrderIds: string[] = [];
+    const failedGroups: Array<{
+      merchantId: number;
+      items: Array<{ productId: number; quantity: number }>;
+      reason: string;
     }> = [];
 
-    await prisma.$transaction(async (tx) => {
-      for (const [merchantId, items] of byMerchant.entries()) {
-        const merchant = await tx.merchant.findUnique({ where: { merchantId } });
-        if (!merchant) throw new Error('商家不存在');
-        const addressFrom = await tx.addressInfo.findFirst({ where: { merchantId } });
-        if (!addressFrom) throw new Error('商家未配置发货地址');
+    for (const group of merchantGroups) {
+      try {
+        // 1. 获取商家的默认发货地址
+        const defaultAddress = await addressService.getDefaultAddress({
+          merchantId: group.merchantId,
+        });
 
-        // 校验商品存在且归属该商家
-        const ids = items.map((productItem) => productItem.productId);
-        const productRecords = await tx.product.findMany({ where: { productId: { in: ids } } });
-        if (productRecords.length !== ids.length) throw new Error('存在无效商品ID');
-        if (productRecords.some((prod) => prod.merchantId !== merchantId)) {
-          throw new Error('商品归属与商家不一致');
+        if (!defaultAddress) {
+          throw new Error(`商家未设置默认发货地址`);
         }
 
-        // 创建收货地址
-        const toData = await addressService.geocodeAndBuildCreateData({
+        // 2. 调用 createOrder 创建订单
+        const result = await this.createOrder({
           userId,
-          name: shippingTo.name,
-          phone: shippingTo.phone,
-          address: shippingTo.address,
-        });
-        const to = await tx.addressInfo.create({ data: toData });
-
-        // 创建订单与详情
-        const order = await tx.order.create({ data: { userId, merchantId } });
-        await tx.orderDetail.create({
-          data: {
-            order: { connect: { orderId: order.orderId } },
-            addressFrom: { connect: { addressInfoId: addressFrom.addressInfoId } },
-            addressTo: { connect: { addressInfoId: to.addressInfoId } },
-          },
-        });
-        await tx.timelineItem.create({
-          data: { orderId: order.orderId, description: '用户创建订单，待商家确认' },
+          merchantId: group.merchantId,
+          shippingFromId: defaultAddress.addressInfoId,
+          shippingToId: addressInfoId,
+          items: group.items,
+          description: '客户下单',
         });
 
-        // 创建订单项（按amount数量）
-        await tx.orderItem.createMany({
-          data: items.map((productItem) => ({
-            orderId: order.orderId,
-            productId: productItem.productId,
-            quantity: productItem.amount,
-          })),
-        });
-
-        // 计算订单总数与价格
-        const amountTotal = items.reduce(
-          (sumQuantity, productItem) => sumQuantity + productItem.amount,
-          0
-        );
-        const priceMap = new Map(
-          productRecords.map((record) => [record.productId, Number(record.price)])
-        );
-        const totalPrice = items.reduce(
-          (sumPrice, productItem) =>
-            sumPrice + productItem.amount * (priceMap.get(productItem.productId) || 0),
-          0
-        );
-
-        results.push({
-          orderId: generateServiceId(order.orderId, ServiceKey.order),
-          merchantId: generateServiceId(merchantId, ServiceKey.merchant),
-          merchantName: merchant.name,
-          userId: generateServiceId(userId, ServiceKey.client),
-          status: '待确认',
-          amount: amountTotal,
-          createdAt: dayjs(order.createdAt).format('YYYY-MM-DD HH:mm:ss'),
-          totalPrice,
+        createdOrderIds.push(result.orderId);
+      } catch (error) {
+        console.error(`Create order failed for merchant ${group.merchantId}:`, error);
+        failedGroups.push({
+          merchantId: group.merchantId,
+          items: group.items,
+          reason: error instanceof Error ? error.message : '创建订单失败',
         });
       }
-    });
+    }
 
-    return results;
+    return { createdOrderIds, failedGroups };
   }
 }
 

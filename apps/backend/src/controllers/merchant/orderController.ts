@@ -102,10 +102,10 @@ export class MerchantOrderController {
         return;
       }
 
-      const shippingTo = body.shippingTo;
-      if (!shippingTo || !shippingTo.name || !shippingTo.phone || !shippingTo.address) {
+      const shippingToId = parseServiceId(body.shippingToId).id;
+      if (!shippingToId || Number.isNaN(shippingToId)) {
         ctx.status = 400;
-        ctx.body = { _message: '收货地址信息不完整' };
+        ctx.body = { _message: '收货地址ID无效' };
         return;
       }
 
@@ -157,19 +157,11 @@ export class MerchantOrderController {
         return;
       }
 
-      const [longitude, latitude] = shippingTo.location || [0, 0];
-
       const payloadBase = {
         userId: userId as number,
         merchantId: merchantId as number,
         shippingFromId,
-        shippingTo: {
-          name: shippingTo.name,
-          phone: shippingTo.phone,
-          address: shippingTo.address,
-          longitude,
-          latitude,
-        },
+        shippingToId,
         items,
       };
 

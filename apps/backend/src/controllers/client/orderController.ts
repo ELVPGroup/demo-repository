@@ -3,7 +3,7 @@ import { orderService } from '@/services/orderService.js';
 import { extractRoleId } from '@/utils/roleHandler.js';
 import { type SortParams, type PaginationParams } from '@/types/index.js';
 import type { ClientOrderListFilterParams, ClientOrderListParams } from '@/types/order.js';
-import { parseServiceId } from '@/utils/serverIdHandler.js';
+import { generateServiceId, parseServiceId, ServiceKey } from '@/utils/serverIdHandler.js';
 import { getTruthyKeyValues } from '@/utils/general.js';
 
 /**
@@ -68,66 +68,78 @@ export class UserOrderController {
 
   /**
    * 客户端创建订单
-   * body:
-   * {
-   *   shippingAddress: { name: string, phone: string, address: string },
-   *   products: [{ productId: string, merchantId: string, amount: number }]
-   * }
    */
   async createOrder(ctx: Context): Promise<void> {
     try {
       const userId = (extractRoleId(ctx.state['user']) as { userId: number }).userId;
       const body = ctx.request.body as {
-        shippingAddress?: { name?: string; phone?: string; address?: string };
-        products?: Array<{ productId?: string; merchantId?: string; amount?: number }>;
+        addressInfoId?: string;
+        merchantGroups?: Array<{
+          merchantId: string;
+          items: Array<{ productId: string; quantity: number }>;
+        }>;
       };
 
-      const shippingAddress = body.shippingAddress || {};
-      const products = body.products || [];
-
-      const name = String(shippingAddress.name || '').trim();
-      const phone = String(shippingAddress.phone || '').trim();
-      const address = String(shippingAddress.address || '').trim();
-      if (!name || !phone || !address) {
+      if (!body.addressInfoId) {
         ctx.status = 400;
-        ctx.body = { _message: '收货信息不完整' };
+        ctx.body = { _message: '请选择收货地址' };
         return;
       }
-      if (!Array.isArray(products) || products.length === 0) {
+      if (!Array.isArray(body.merchantGroups) || body.merchantGroups.length === 0) {
         ctx.status = 400;
         ctx.body = { _message: '商品列表不能为空' };
         return;
       }
 
-      const normalized = products.map((product) => ({
-        productId: parseServiceId(product.productId!).id,
-        merchantId: parseServiceId(product.merchantId!).id,
-        amount: Number(product.amount ?? 1),
-      }));
-      if (normalized.some((p) => !Number.isInteger(p.productId) || p.productId <= 0)) {
-        ctx.status = 400;
-        ctx.body = { _message: '商品ID无效' };
-        return;
-      }
-      if (normalized.some((p) => !Number.isInteger(p.merchantId) || p.merchantId <= 0)) {
-        ctx.status = 400;
-        ctx.body = { _message: '商家ID无效' };
-        return;
-      }
-      if (normalized.some((p) => !Number.isInteger(p.amount) || p.amount <= 0)) {
-        ctx.status = 400;
-        ctx.body = { _message: '商品数量无效' };
-        return;
-      }
+      const normalizedGroups = body.merchantGroups.map((group) => {
+        const merchantId = parseServiceId(group.merchantId).id;
+        if (!Number.isInteger(merchantId) || merchantId <= 0) {
+          throw new Error('商家ID无效');
+        }
+        const items = (group.items || []).map((item) => {
+          const productId = parseServiceId(item.productId).id;
+          const quantity = Number(item.quantity ?? 0);
+          if (!Number.isInteger(productId) || productId <= 0) {
+            throw new Error('商品ID无效');
+          }
+          if (!Number.isInteger(quantity) || quantity <= 0) {
+            throw new Error('商品数量无效');
+          }
+          return { productId, quantity };
+        });
+
+        if (items.length === 0) {
+          throw new Error('每个商家的订单项不能为空');
+        }
+        return { merchantId, items };
+      });
 
       const result = await orderService.createOrdersByClient({
         userId,
-        shippingTo: { name, phone, address },
-        products: normalized,
+        addressInfoId: parseServiceId(body.addressInfoId).id,
+        merchantGroups: normalizedGroups,
       });
 
+      const responseData = {
+        succeeded: result.createdOrderIds,
+        failed: result.failedGroups.map((g) => ({
+          merchantId: generateServiceId(g.merchantId, ServiceKey.merchant),
+          items: g.items.map((i) => ({
+            productId: generateServiceId(i.productId, ServiceKey.product),
+            quantity: i.quantity,
+          })),
+          reason: g.reason,
+        })),
+      };
+
       ctx.status = 201;
-      ctx.body = { _data: result, _message: '订单创建成功，待商家确认' };
+      ctx.body = {
+        _data: responseData,
+        _message:
+          responseData.failed.length > 0
+            ? `订单处理完成，有 ${responseData.failed.length} 个商家创建失败`
+            : '订单创建成功，待商家确认',
+      };
     } catch (error) {
       ctx.status = 400;
       ctx.body = { _message: error instanceof Error ? error.message : '创建订单失败' };

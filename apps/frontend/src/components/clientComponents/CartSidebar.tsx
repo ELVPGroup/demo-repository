@@ -149,7 +149,8 @@ function MerchantGroup({ group }: MerchantGroupProps) {
 
 // 购物车侧边栏
 function CartSidebar({ open, onClose }: CartSidebarProps) {
-  const { products, totalPrice, totalQuantity, isEmpty, clearCart } = useCartStore();
+  const { products, totalPrice, totalQuantity, isEmpty, clearCart, removeProductsByMerchantIds } =
+    useCartStore();
 
   const [loading, setLoading] = useState(false);
   const [address, setAddress] = useState<AddressInfo | null>(null);
@@ -173,24 +174,6 @@ function CartSidebar({ open, onClose }: CartSidebarProps) {
     fetchDefaultAddress();
   }, []);
 
-  const handleCheckout = async () => {
-    if (isEmpty) {
-      message.info('购物车为空');
-      return;
-    }
-    setLoading(true);
-    try {
-      await clientAxiosInstance.post('/orders', {
-        products,
-        shippingAddress: address,
-      });
-      clearCart();
-      onClose();
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // 按商家分组商品
   const merchantGroups = Object.values(
     products.reduce(
@@ -213,6 +196,57 @@ function CartSidebar({ open, onClose }: CartSidebarProps) {
       {} as Record<string, MerchantGroup>
     )
   );
+
+  console.log(merchantGroups);
+
+  const handleCheckout = async () => {
+    if (isEmpty) {
+      message.info('购物车为空');
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await clientAxiosInstance.post('/orders', {
+        merchantGroups,
+        addressInfoId: address?.addressInfoId,
+      });
+
+      const { failed } = response.data.data;
+
+      if (failed && failed.length > 0) {
+        // 部分失败：清除成功的商家商品，保留失败的商品
+        // 这里后端返回的 failed 包含 merchantId
+        // 可以从 merchantGroups 中找出不在 failed 列表中的 merchantId
+        const failedMerchantIds = failed.map((f: { merchantId: string }) => f.merchantId);
+        const succeededMerchantIds = merchantGroups
+          .map((g) => g.merchantId)
+          .filter((id) => !failedMerchantIds.includes(id));
+
+        removeProductsByMerchantIds(succeededMerchantIds);
+
+        // 显示失败原因
+        const errorMsg = failed
+          .map((f: { merchantId: string; reason: string }) => {
+            // 获取商家名称用于展示
+            const group = merchantGroups.find((g) => g.merchantId === f.merchantId);
+            const merchantName = group ? group.merchantName : '未知商家';
+            return `${merchantName}: ${f.reason}`;
+          })
+          .join('; ');
+        message.warning(`部分订单创建失败: ${errorMsg}`, 5);
+      } else {
+        // 全部成功
+        clearCart();
+        onClose();
+        message.success('订单创建成功');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      // 如果是网络错误或其他非业务逻辑错误，保留购物车状态
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Drawer
