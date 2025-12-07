@@ -1,14 +1,55 @@
 import { useUserStore } from '@/store/userStore';
-import { Button } from 'antd';
+import { Avatar, Badge, Button, Dropdown, type MenuProps } from 'antd';
 import { LogIn, Search, ShoppingCart, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { useCartStore } from '@/store/useCartStore';
+import CartSidebar from './CartSidebar';
+import AddressManagerDialog from './AddressManagerDialog';
 
 function ClientNavbar() {
   const [isScrolled, setIsScrolled] = useState(false);
-  const { isLoggedIn } = useUserStore();
+  const { isLoggedIn, user } = useUserStore();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [cartOpen, setCartOpen] = useState(false);
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+
+  const { products } = useCartStore();
+
+  const items: MenuProps['items'] = [
+    {
+      label: `用户 ${user?.name}`,
+      key: 'userInfo',
+      disabled: true,
+    },
+    {
+      type: 'divider',
+    },
+    {
+      label: '地址管理',
+      key: 'addressManager',
+    },
+    {
+      label: '退出登录',
+      key: 'logout',
+      danger: true,
+    },
+  ];
+
+  const onClick: MenuProps['onClick'] = ({ key }) => {
+    switch (key) {
+      case 'addressManager':
+        setAddressDialogOpen(true);
+        break;
+      case 'logout':
+        useUserStore.getState().logout();
+        navigate('/client');
+        break;
+      default:
+        break;
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -72,19 +113,24 @@ function ClientNavbar() {
                 </Link>
 
                 {/* Cart Icon */}
-                <Link
-                  to="/cart"
-                  className="text-foreground hover:text-primary relative p-2 transition-colors"
+                <Badge
+                  count={products.length}
+                  className="cursor-pointer"
+                  onClick={() => setCartOpen(true)}
                 >
                   <ShoppingCart className="h-6 w-6" />
-                </Link>
+                </Badge>
 
                 {/* User Avatar with Dropdown */}
-                {/* <AvatarDropdown /> */}
+                <Dropdown menu={{ items, onClick }} placement="bottom">
+                  <Avatar style={{ backgroundColor: '#e6f4ff', color: '#80aced' }}>
+                    {user?.name.slice(0, 2)}
+                  </Avatar>
+                </Dropdown>
               </>
             ) : (
               /* Login/Register Button */
-              <Button onClick={() => navigate('/login')} className="gap-2">
+              <Button onClick={() => navigate('/')} className="gap-2">
                 <LogIn className="h-4 w-4" />
                 登录 / 注册
               </Button>
@@ -92,6 +138,8 @@ function ClientNavbar() {
           </div>
         </div>
       </div>
+      <CartSidebar open={cartOpen} onClose={() => setCartOpen(false)} />
+      <AddressManagerDialog open={addressDialogOpen} onClose={() => setAddressDialogOpen(false)} />
     </nav>
   );
 }

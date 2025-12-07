@@ -1,24 +1,28 @@
 import { BASE_SERVER_URL } from '@/config';
+import { MinusOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button } from 'antd';
 import { ImageOff, Store } from 'lucide-react';
-
-export interface ClientProduct {
-  productId: string;
-  name: string;
-  description: string;
-  price: number;
-  amount: number;
-  imageUrl?: string;
-  merchantId: string;
-  merchantName: string;
-}
+import type { ClientProduct } from '@/types/product';
+import { useCartStore } from '@/store/useCartStore';
 
 interface ProductCardProps {
   product: ClientProduct;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+  const { addProduct, updateProductQuantity, removeProduct, products } = useCartStore();
+  const cartItem = products.find((p) => p.productId === product.productId);
+  const currentQty = cartItem?.quantity ?? 0;
+
+  const handleQtyChange = (product: ClientProduct, value: number | null) => {
+    if (typeof value === 'number') {
+      if (value >= 1) updateProductQuantity(product.productId, value);
+      else if (value === 0) removeProduct(product);
+    }
+  };
+
   return (
-    <div className="group relative w-full cursor-pointer overflow-hidden rounded-xl bg-white transition-all duration-300 hover:shadow-xl">
+    <div className="group coverflow-hidden relative w-full overflow-hidden rounded-xl bg-white transition-all duration-300">
       {/* Background Image */}
       <div className="inset-0 h-[300px]">
         {product.imageUrl ? (
@@ -41,9 +45,32 @@ export default function ProductCard({ product }: ProductCardProps) {
             ¥ {typeof product.price === 'number' ? product.price.toFixed(2) : product.price}
           </p>
         </div>
-        <div className="flex items-center gap-2 text-gray-600">
-          <Store size={16} />
-          <p className="text-md line-clamp-1">{product.merchantName}</p>
+        <div className="flex justify-between">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Store size={16} />
+            <p className="text-md line-clamp-1">{product.merchantName}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {currentQty > 0 ? (
+              <>
+                <Button
+                  type="default"
+                  icon={<MinusOutlined />}
+                  onClick={() => handleQtyChange(product, currentQty - 1)}
+                  size="small"
+                  disabled={currentQty <= 0}
+                />
+                <p className="text-md text-balance">{currentQty}</p>
+              </>
+            ) : null}
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => addProduct(product)}
+              size="small"
+              disabled={currentQty >= product.amount || product.amount <= 0}
+            />
+          </div>
         </div>
       </div>
     </div>

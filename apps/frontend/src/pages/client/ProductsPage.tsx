@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Pagination } from 'antd';
 import ProductGrid from '../../components/clientComponents/product/ProductGrid';
-import type { ClientProduct } from '../../components/clientComponents/product/ProductCard';
 import { clientAxiosInstance } from '@/utils/axios';
+import type { ClientProduct } from '@/types/product';
 
 function ProductsPage() {
   const [products, setProducts] = useState<ClientProduct[]>([]);
@@ -30,7 +30,7 @@ function ProductsPage() {
   }, [fetchProducts]);
 
   return (
-    <main className="px-4 pt-32 pb-16 sm:px-6 lg:px-8">
+    <main className="px-4 pt-12 pb-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div>
           <h1 className="mb-2 text-3xl font-bold text-gray-900">商品选购</h1>
