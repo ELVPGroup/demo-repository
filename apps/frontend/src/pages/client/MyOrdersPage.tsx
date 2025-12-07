@@ -197,7 +197,7 @@ const MyOrdersPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 pt-20">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
         {/* 头部区域 */}
         <div className="flex items-center justify-between">

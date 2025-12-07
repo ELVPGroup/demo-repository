@@ -1,5 +1,6 @@
 import { Row, Col, Empty } from 'antd';
-import ProductCard, { type ClientProduct } from './ProductCard';
+import ProductCard from './ProductCard';
+import type { ClientProduct } from '@/types/product';
 
 interface ProductGridProps {
   products: ClientProduct[];

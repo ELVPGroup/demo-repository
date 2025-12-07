@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useCartStore } from './useCartStore';
 
 type Side = 'client' | 'merchant';
 
@@ -44,7 +45,10 @@ export const useUserStore = create<UserState>()(
           expiresAt: Date.now() + ttl,
         });
       },
-      logout: () => set({ user: null, token: null, isLoggedIn: false, expiresAt: null }),
+      logout: () => {
+        if (useUserStore.getState().side === 'client') useCartStore.getState().clearCart();
+        set({ user: null, token: null, isLoggedIn: false, expiresAt: null });
+      },
     }),
     {
       name: 'evlp-user-storage',
