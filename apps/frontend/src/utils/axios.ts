@@ -56,6 +56,10 @@ const createAxiosInstance = (baseURL: string, config?: AxiosRequestConfig): Axio
         const { status, data } = error.response;
         console.error('响应错误:', status, data);
         const msg = data?.message || error.message || '请求失败';
+        if (status === 400) {
+          message.error(msg);
+        }
+
         // 401: 未授权，token 过期或无效
         if (status === 401) {
           message.error(msg);

@@ -159,6 +159,68 @@ export class AddressController {
       };
     }
   }
+
+  /**
+   * 获取默认地址
+   */
+  async getDefaultAddress(ctx: Context): Promise<void> {
+    try {
+      const address = await addressService.getDefaultAddress({
+        ...this.extractRoleId(ctx.state['user']),
+      });
+      if (!address) {
+        ctx.status = 400;
+        ctx.body = {
+          _message: '未设置默认地址',
+        };
+        return;
+      }
+      ctx.status = 200;
+      ctx.body = {
+        _data: this.transformAddress(address),
+        _message: '获取默认地址成功',
+      };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = {
+        _message: error instanceof Error ? error.message : '获取默认地址失败',
+      };
+    }
+  }
+  /**
+   * 设置默认地址
+   */
+  async setDefaultAddress(ctx: Context): Promise<void> {
+    try {
+      const { addressInfoId } = ctx.request.body as {
+        addressInfoId?: string;
+      };
+
+      if (!addressInfoId) {
+        ctx.status = 400;
+        ctx.body = {
+          _message: '缺少地址信息ID',
+        };
+        return;
+      }
+      console.log('controller', this.extractRoleId(ctx.state['user']));
+      const result = await addressService.setDefaultAddress({
+        ...this.extractRoleId(ctx.state['user']),
+        addressInfoId: parseServiceId(addressInfoId).id,
+      });
+
+      ctx.status = 200;
+      ctx.body = {
+        _data: this.transformAddress(result),
+        _message: '设置默认地址成功',
+      };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = {
+        _message: error instanceof Error ? error.message : '设置默认地址失败',
+      };
+    }
+  }
 }
 
 export const addressController = new AddressController();

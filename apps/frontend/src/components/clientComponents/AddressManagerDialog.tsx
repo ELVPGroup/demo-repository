@@ -12,9 +12,16 @@ import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
 interface AddressManagerDialogProps {
   open: boolean;
   onClose: () => void;
+  isSelect?: boolean;
+  onSelect?: (address: AddressInfo) => void;
 }
 
-function AddressManagerDialog({ open, onClose }: AddressManagerDialogProps) {
+function AddressManagerDialog({
+  open,
+  onClose,
+  isSelect = false,
+  onSelect,
+}: AddressManagerDialogProps) {
   const {
     shippingList,
     loading,
@@ -28,6 +35,7 @@ function AddressManagerDialog({ open, onClose }: AddressManagerDialogProps) {
   const [mode, setMode] = useState<'list' | 'form'>('list');
   const [editingAddress, setEditingAddress] = useState<AddressInfo | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -55,7 +63,15 @@ function AddressManagerDialog({ open, onClose }: AddressManagerDialogProps) {
 
   const handleDelete = async (id: string) => {
     await deleteShipping(id);
-    message.success('删除成功');
+  };
+
+  const handleCardClick = (address: AddressInfo) => {
+    if (!isSelect) return;
+    setSelectedAddressId(address.addressInfoId);
+    if (onSelect) {
+      onSelect(address);
+      onClose();
+    }
   };
 
   const handleSave = async () => {
@@ -139,7 +155,13 @@ function AddressManagerDialog({ open, onClose }: AddressManagerDialogProps) {
               {filteredList.map((address) => (
                 <div
                   key={address.addressInfoId}
-                  className="rounded-lg border border-gray-200 p-4 transition-shadow"
+                  className={
+                    `cursor-pointer rounded-xl bg-white p-4 shadow-sm ` +
+                    (isSelect && selectedAddressId === address.addressInfoId
+                      ? 'ring-2 ring-blue-500'
+                      : '')
+                  }
+                  onClick={() => handleCardClick(address)}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 space-y-3">
@@ -163,13 +185,18 @@ function AddressManagerDialog({ open, onClose }: AddressManagerDialogProps) {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        type="default"
-                        size="small"
-                        onClick={() => handleEdit(address)}
-                        className="hover:bg-gray-100"
-                        icon={<EditOutlined />}
-                      />
+                      {!isSelect && (
+                        <Button
+                          type="default"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEdit(address);
+                          }}
+                          className="hover:bg-gray-100"
+                          icon={<EditOutlined />}
+                        />
+                      )}
                       <Popconfirm
                         title="确定删除此地址？"
                         placement="bottomRight"
@@ -178,8 +205,29 @@ function AddressManagerDialog({ open, onClose }: AddressManagerDialogProps) {
                         cancelText="取消"
                         okButtonProps={{ danger: true }}
                       >
-                        <Button type="default" size="small" danger icon={<DeleteOutlined />} />
+                        <Button
+                          type="default"
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={(e) => e.stopPropagation()}
+                        />
                       </Popconfirm>
+                      {isSelect && (
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onSelect) {
+                              onSelect(address);
+                              onClose();
+                            }
+                          }}
+                        >
+                          选择
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

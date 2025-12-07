@@ -35,8 +35,12 @@ model User {
   name      String        @db.VarChar(255)
   phone     String        @unique @db.VarChar(20)
   password  String        @db.VarChar(255)
-  addresses AddressInfo[]
+  addresses AddressInfo[] @relation("UserAddresses")
   orders    Order[]
+
+  // Default address foreign key
+  defaultAddressId Int?         @map("defaultAddressId")
+  defaultAddress   AddressInfo? @relation("UserDefaultAddress", fields: [defaultAddressId], references: [addressInfoId], onDelete: SetNull)
 
   @@map("users")
 }
@@ -47,14 +51,19 @@ model Merchant {
   name               String              @db.VarChar(255)
   phone              String              @unique @db.VarChar(20)
   password           String              @db.VarChar(255)
-  addresses          AddressInfo[]
+  addresses          AddressInfo[]       @relation("MerchantAddresses")
   orders             Order[]
   // 一个商家对应多个商品
   products           Product[]
   // 一个商家对应一个配送范围
   deliveryArea       DeliveryArea?
-  // 多个
+  // 多个商家可以设置多个物流 provider
   logisticsProviders LogisticsProvider[]
+
+  // Default address foreign key
+  defaultAddressId Int?         @map("defaultAddressId")
+  // 多个商家可以设置多个默认地址
+  defaultAddress   AddressInfo? @relation("MerchantDefaultAddress", fields: [defaultAddressId], references: [addressInfoId], onDelete: SetNull)
 
   @@map("merchants")
 }
@@ -71,9 +80,13 @@ model AddressInfo {
 
   // Foreign Keys
   userId     Int?      @map("userId")
-  user       User?     @relation(fields: [userId], references: [userId])
+  user       User?     @relation("UserAddresses", fields: [userId], references: [userId])
   merchantId Int?      @map("merchantId")
-  merchant   Merchant? @relation(fields: [merchantId], references: [merchantId])
+  merchant   Merchant? @relation("MerchantAddresses", fields: [merchantId], references: [merchantId])
+
+  // 默认地址反向引用（一个地址可作为多个用户/商家的默认地址）
+  usersUsingAsDefault     User[]     @relation("UserDefaultAddress")
+  merchantsUsingAsDefault Merchant[] @relation("MerchantDefaultAddress")
 
   // 一个地址可作为多个订单的发货地址
   shippingFromOrders OrderDetail[] @relation("ShippingFromAddress") // 发货地址

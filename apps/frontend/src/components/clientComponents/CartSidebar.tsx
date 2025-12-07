@@ -3,9 +3,11 @@ import { useCartStore } from '@/store/useCartStore';
 import type { ClientProduct } from '@/types/product';
 import { BASE_SERVER_URL } from '@/config';
 import { DeleteOutlined } from '@ant-design/icons';
-import { Store } from 'lucide-react';
-import { clientAxiosInstance } from '@/utils/axios';
-import { useState } from 'react';
+import { MapPin, Store } from 'lucide-react';
+import { clientAxiosInstance, commonAxiosInstance } from '@/utils/axios';
+import { useEffect, useState } from 'react';
+import type { AddressInfo } from '@/types/orderDetailInterface';
+import AddressManagerDialog from './AddressManagerDialog';
 
 interface CartSidebarProps {
   open: boolean;
@@ -22,6 +24,55 @@ interface MerchantGroup {
 
 interface MerchantGroupProps {
   group: MerchantGroup;
+}
+
+// 地址展示组件
+function AddressDisplay({
+  address,
+  onSelect,
+}: {
+  address: AddressInfo | null;
+  onSelect: (address: AddressInfo) => void;
+}) {
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
+
+  return (
+    <>
+      <div className="mb-6 rounded-xl p-4 shadow-sm">
+        {address ? (
+          <>
+            <div className="flex items-center justify-between gap-2 pb-2">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 shrink-0" />
+                <span className="line-clamp-1 text-lg font-medium">{address.address}</span>
+              </div>
+              <Button size="small" onClick={() => setAddressDialogOpen(true)}>
+                选择
+              </Button>
+            </div>
+            <div>
+              <span className="mr-4 text-sm text-gray-800">{address.name}</span>
+              <span className="text-sm text-gray-500">{address.phone}</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-between gap-2">
+            <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="text-sm text-gray-500">未设置地址</span>
+            <Button size="small" onClick={() => setAddressDialogOpen(true)}>
+              选择地址
+            </Button>
+          </div>
+        )}
+      </div>
+      <AddressManagerDialog
+        open={addressDialogOpen}
+        onClose={() => setAddressDialogOpen(false)}
+        isSelect
+        onSelect={onSelect}
+      />
+    </>
+  );
 }
 
 // 每个商家的商品列表组
@@ -98,26 +149,46 @@ function MerchantGroup({ group }: MerchantGroupProps) {
 
 // 购物车侧边栏
 function CartSidebar({ open, onClose }: CartSidebarProps) {
-  const { products, totalPrice, totalQuantity, isEmpty } = useCartStore();
+  const { products, totalPrice, totalQuantity, isEmpty, clearCart } = useCartStore();
 
-  // const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [address, setAddress] = useState<AddressInfo | null>(null);
+
+  const setDefaultAddress = (address: AddressInfo) => {
+    commonAxiosInstance.post('/shipping/default', {
+      addressInfoId: address.addressInfoId,
+    });
+    setAddress(address);
+  };
+
+  useEffect(() => {
+    const fetchDefaultAddress = async () => {
+      try {
+        const { data } = await commonAxiosInstance.get('/shipping/default');
+        setAddress(data.data);
+      } catch (error) {
+        console.error('获取默认地址失败', error);
+      }
+    };
+    fetchDefaultAddress();
+  }, []);
 
   const handleCheckout = async () => {
     if (isEmpty) {
       message.info('购物车为空');
       return;
     }
-    // TODO
-    // setLoading(true);
-    // try {
-    //   await clientAxiosInstance.post('/orders', {
-    //     products,
-    //   });
-    // } finally {
-    //   setLoading(false);
-    // }
-    message.success('下单请求已提交');
-    onClose();
+    setLoading(true);
+    try {
+      await clientAxiosInstance.post('/orders', {
+        products,
+        shippingAddress: address,
+      });
+      clearCart();
+      onClose();
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 按商家分组商品
@@ -157,6 +228,7 @@ function CartSidebar({ open, onClose }: CartSidebarProps) {
         <Empty description="购物车为空" />
       ) : (
         <>
+          <AddressDisplay address={address} onSelect={setDefaultAddress} />
           <div className="space-y-4 pb-28">
             {merchantGroups.map((group) => (
               <MerchantGroup key={group.merchantId} group={group} />

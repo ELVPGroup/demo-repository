@@ -30,4 +30,16 @@ router.delete('/list/:addressInfoId', authMiddleware, (ctx) =>
   addressController.deleteAddress(ctx)
 );
 
+/**
+ * GET /api/shipping/default
+ * 获取当前商家/用户的默认地址
+ */
+router.get('/default', authMiddleware, (ctx) => addressController.getDefaultAddress(ctx));
+
+/**
+ * POST /api/shipping/default
+ * 设置当前商家/用户的默认地址
+ */
+router.post('/default', authMiddleware, (ctx) => addressController.setDefaultAddress(ctx));
+
 export default router;
