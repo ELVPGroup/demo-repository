@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router';
 import { Layout, Menu, Button } from 'antd';
 import type { MenuProps } from 'antd';
-import { Home, ClipboardList, Package, LogOut, MapPinHouse, Store } from 'lucide-react';
+import { Home, ClipboardList, Package, LogOut, MapPinHouse, Store, Truck } from 'lucide-react';
 import { Logo } from './Logo';
 import { useUserStore } from '@/store/userStore';
 
@@ -35,6 +35,8 @@ const Sidebar: React.FC = () => {
       return 'shipping';
     } else if (path.startsWith(`${base}/products`)) {
       return 'products';
+    } else if (path.startsWith(`${base}/logistics`)) {
+      return 'logistics';
     }
     return 'dashboard';
   };
@@ -69,6 +71,12 @@ const Sidebar: React.FC = () => {
       icon: <Store size={20} />,
       label: '商品管理',
       onClick: () => navigate(`${base}/products/list`),
+    },
+    {
+      key: 'logistics',
+      icon: <Truck size={20} />,
+      label: '物流供应商管理',
+      onClick: () => navigate(`${base}/logistics/list`),
     },
   ];
 

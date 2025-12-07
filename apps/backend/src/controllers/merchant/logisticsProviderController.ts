@@ -1,6 +1,7 @@
 import type { Context } from 'koa';
 import { logisticsProviderService } from '@/services/logisticsProviderService.js';
 import { extractRoleId } from '@/utils/roleHandler.js';
+import { parseServiceId } from '@/utils/serverIdHandler.js';
 
 class MerchantLogisticsProviderController {
   /**
@@ -49,6 +50,65 @@ class MerchantLogisticsProviderController {
     } catch (error) {
       ctx.status = 400;
       ctx.body = { _message: error instanceof Error ? error.message : '新增物流供应商失败' };
+    }
+  }
+  /**
+   * 获取全部物流供应商列表（可选鉴权）
+   */
+  async listAll(ctx: Context): Promise<void> {
+    try {
+      let merchantId: number | undefined;
+      if (ctx.state['user']) {
+        try {
+          const role = extractRoleId(ctx.state['user']);
+          if ('merchantId' in role) {
+            merchantId = role.merchantId;
+          }
+        } catch {
+          // 忽略提取角色失败，视为未登录
+        }
+      }
+
+      const data = await logisticsProviderService.listAll(merchantId);
+      ctx.status = 200;
+      ctx.body = { _data: data, _message: '获取物流供应商列表成功' };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = { _message: error instanceof Error ? error.message : '获取物流供应商列表失败' };
+    }
+  }
+
+  /**
+   * 商家注册现有物流供应商
+   */
+  async register(ctx: Context): Promise<void> {
+    try {
+      const { logisticsId } = ctx.request.body as { logisticsId?: string };
+      const merchantId = (extractRoleId(ctx.state['user']) as { merchantId: number }).merchantId;
+
+      if (!logisticsId) {
+        ctx.status = 400;
+        ctx.body = { _message: '物流供应商ID无效' };
+        return;
+      }
+
+      const numericLogisticsId = parseServiceId(logisticsId).id;
+      if (!Number.isInteger(numericLogisticsId) || numericLogisticsId <= 0) {
+        ctx.status = 400;
+        ctx.body = { _message: '物流供应商ID格式错误' };
+        return;
+      }
+
+      const result = await logisticsProviderService.register({
+        merchantId,
+        logisticsId: numericLogisticsId,
+      });
+
+      ctx.status = 200;
+      ctx.body = { _data: result, _message: '注册物流供应商成功' };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = { _message: error instanceof Error ? error.message : '注册物流供应商失败' };
     }
   }
 }

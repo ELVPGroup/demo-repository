@@ -28,6 +28,16 @@ export class AddressModel {
       where: { addressInfoId },
     });
   }
+
+  async findDefault(addressInfoId: number) {
+    return prisma.addressInfo.findUnique({
+      where: { addressInfoId },
+      include: {
+        usersUsingAsDefault: true,
+        merchantsUsingAsDefault: true,
+      },
+    });
+  }
 }
 
 export const addressModel = new AddressModel();

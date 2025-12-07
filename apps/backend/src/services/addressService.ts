@@ -1,6 +1,7 @@
 import { addressModel } from '@/models/addressModel.js';
 import { amapClient } from '@/amapClient.js';
 import type { Prisma } from 'generated/prisma/client.js';
+import prisma from '@/db.js';
 
 interface BaseAddressPayload {
   userId?: number;
@@ -21,6 +22,10 @@ interface UpdateAddressPayload extends BaseAddressPayload {
 }
 
 interface DeleteAddressPayload extends BaseAddressPayload {
+  addressInfoId: number;
+}
+
+interface SetDefaultAddressPayload extends BaseAddressPayload {
   addressInfoId: number;
 }
 
@@ -140,6 +145,67 @@ export class AddressService {
 
     const deletedAddress = await addressModel.deleteById(existingAddress.addressInfoId);
     return deletedAddress;
+  }
+
+  /**
+   * 获取默认地址
+   */
+  async getDefaultAddress(payload: BaseAddressPayload) {
+    const roleIds = this.extractRoleId(payload);
+    if (!roleIds.userId && !roleIds.merchantId) {
+      throw new Error('缺少用户ID或商家ID');
+    }
+    const role = roleIds.userId
+      ? await prisma.user.findUnique({
+          where: { userId: roleIds.userId },
+          include: {
+            defaultAddress: true,
+          },
+        })
+      : await prisma.merchant.findUnique({
+          where: { merchantId: roleIds.merchantId! },
+          include: {
+            defaultAddress: true,
+          },
+        });
+    if (!role) {
+      throw new Error('用户或商家不存在');
+    }
+    return role.defaultAddress;
+  }
+
+  /**
+   * 设置默认地址
+   */
+  async setDefaultAddress(payload: SetDefaultAddressPayload) {
+    const { addressInfoId } = payload;
+    const roleId = this.extractRoleId(payload);
+
+    const address = await addressModel.findById(addressInfoId);
+    if (!address) {
+      throw new Error('地址不存在');
+    }
+
+    if (roleId.userId && address.userId !== roleId.userId) {
+      throw new Error('没有权限设置该地址为默认地址');
+    }
+    if (roleId.merchantId && address.merchantId !== roleId.merchantId) {
+      throw new Error('没有权限设置该地址为默认地址');
+    }
+
+    if (roleId.userId) {
+      await prisma.user.update({
+        where: { userId: roleId.userId },
+        data: { defaultAddressId: addressInfoId },
+      });
+    } else if (roleId.merchantId) {
+      await prisma.merchant.update({
+        where: { merchantId: roleId.merchantId },
+        data: { defaultAddressId: addressInfoId },
+      });
+    }
+
+    return address;
   }
 }
 

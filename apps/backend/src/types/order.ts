@@ -39,7 +39,7 @@ export type CreateOrderPayload = {
   userId: number;
   merchantId: number;
   shippingFromId: number;
-  shippingTo: CreateShippingToInput;
+  shippingToId: number;
   items: CreateOrderItemInput[];
   description?: string;
 };
@@ -49,9 +49,7 @@ export type CreateOrderBody = {
   amount: number;
   totalPrice: number;
   shippingFromId: string;
-  shippingTo: Omit<Address, 'addressInfoId' | 'position'> & {
-    addressInfoId: string; // 接收地址服务ID（string）
-  };
+  shippingToId: string;
   products: Array<
     Product & {
       productId: string; // 接收商品服务ID（string）

@@ -17,6 +17,8 @@ interface CartState {
   clearCart: () => void;
   // 更新购物车某个商品数量
   updateProductQuantity: (productId: string, newProductQuantity: number) => void;
+  // 移除多个商家的商品
+  removeProductsByMerchantIds: (merchantIds: string[]) => void;
 }
 
 const updateTotalPrice = (products: ClientProduct[]) => {
@@ -91,6 +93,12 @@ export const useCartStore = create<CartState>()(
           return deriveState(nextProducts);
         });
       },
+
+      removeProductsByMerchantIds: (merchantIds: string[]) =>
+        set((state) => {
+          const nextProducts = state.products.filter((p) => !merchantIds.includes(p.merchantId));
+          return deriveState(nextProducts);
+        }),
     }),
     {
       name: 'evlp-user-cart-storage',

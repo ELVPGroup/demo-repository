@@ -24,7 +24,7 @@ export default function ProductListTable(props: ProductListTableProps) {
             src={`${BASE_SERVER_URL}${url}`}
             width={64}
             height={64}
-            style={{ objectFit: 'cover' }}
+            style={{ objectFit: 'cover', borderRadius: 6 }}
           />
         ) : (
           <Typography.Text type="secondary">无</Typography.Text>
