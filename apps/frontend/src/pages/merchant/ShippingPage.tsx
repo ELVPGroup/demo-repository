@@ -1,21 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Button, Modal, Form, Input, message, Popconfirm, Empty, Spin } from 'antd';
-import { Plus, Edit, Trash2, MapPin, User, Phone, Home } from 'lucide-react';
+import { Card, Button, Modal, Form, Input, message, Popconfirm, Empty, Spin, Tag } from 'antd';
+import { Plus, Edit, Trash2, MapPin, User, Phone } from 'lucide-react';
 import { TopBar } from '@/components/merchantComponents/TopBar';
 import { useShippingStore } from '@/store/useShippingStore';
-import type { AddressInfo, CreateAddressRequest, UpdateAddressRequest } from '@/types/orderDetailInterface';
+import type {
+  AddressInfo,
+  CreateAddressRequest,
+  UpdateAddressRequest,
+} from '@/types/orderDetailInterface';
 
 const ShippingPage: React.FC = () => {
   const [editVisible, setEditVisible] = useState(false);
   const [editingAddress, setEditingAddress] = useState<AddressInfo | null>(null);
   const [form] = Form.useForm();
 
-  const { shippingList, loading, fetchShippingList, addShipping, updateShipping, deleteShipping } = useShippingStore();
+  const {
+    shippingList,
+    loading,
+    fetchShippingList,
+    addShipping,
+    updateShipping,
+    deleteShipping,
+    defaultAddress,
+    fetchDefaultAddress,
+    setDefaultAddress,
+  } = useShippingStore();
 
-  // 组件挂载时获取地址列表
+  // 组件挂载时获取地址列表和默认地址
   useEffect(() => {
     fetchShippingList();
-  }, [fetchShippingList]);
+    fetchDefaultAddress();
+  }, [fetchShippingList, fetchDefaultAddress]);
 
   // 打开添加地址模态框
   const handleAdd = () => {
@@ -81,6 +96,16 @@ const ShippingPage: React.FC = () => {
     }
   };
 
+  // 设为默认地址
+  const handleSetDefault = async (addressId: string) => {
+    try {
+      await setDefaultAddress(addressId);
+      message.success('设置默认地址成功');
+    } catch (error) {
+      message.error('设置失败，请重试');
+    }
+  };
+
   // 取消编辑
   const handleCancel = () => {
     setEditVisible(false);
@@ -93,12 +118,7 @@ const ShippingPage: React.FC = () => {
       <main className="ml-60 flex-1 px-10 py-6">
         <div className="mb-8 flex items-center justify-between">
           <TopBar title="地址管理" />
-          <Button
-            type="primary"
-            icon={<Plus size={18} />}
-            onClick={handleAdd}
-            size="large"
-          >
+          <Button type="primary" icon={<Plus size={18} />} onClick={handleAdd} size="large">
             添加地址
           </Button>
         </div>
@@ -123,7 +143,7 @@ const ShippingPage: React.FC = () => {
             {shippingList.map((address) => (
               <Card
                 key={address.addressInfoId}
-                className="hover:shadow-lg transition-shadow"
+                className="transition-shadow hover:shadow-lg"
                 variant="borderless"
                 actions={[
                   <Button
@@ -143,11 +163,7 @@ const ShippingPage: React.FC = () => {
                     cancelText="取消"
                     okButtonProps={{ danger: true }}
                   >
-                    <Button
-                      type="text"
-                      danger
-                      icon={<Trash2 size={16} />}
-                    >
+                    <Button type="text" danger icon={<Trash2 size={16} />}>
                       删除
                     </Button>
                   </Popconfirm>,
@@ -157,10 +173,17 @@ const ShippingPage: React.FC = () => {
                   {/* 收件人信息 */}
                   <div className="flex items-start gap-3">
                     <div className="rounded-full bg-blue-100 p-2">
-                      <User className="h-4 w-4 var(--color-primary)" />
+                      <User className="var(--color-primary) h-4 w-4" />
                     </div>
                     <div className="flex-1">
-                      <div className="font-semibold text-gray-900">{address.name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-semibold text-gray-900">{address.name}</div>
+                        {defaultAddress?.addressInfoId === address.addressInfoId && (
+                          <Tag color="blue" className="rounded-full px-2 text-xs">
+                            默认
+                          </Tag>
+                        )}
+                      </div>
                       <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
                         <Phone className="h-3 w-3" />
                         <span>{address.phone}</span>
@@ -174,9 +197,13 @@ const ShippingPage: React.FC = () => {
                       <MapPin className="h-4 w-4 text-green-600" />
                     </div>
 
-                    <div className="text-sm text-gray-700">{address.address}</div>
+                    <div className="flex-1 text-sm text-gray-700">{address.address}</div>
 
-
+                    {defaultAddress?.addressInfoId !== address.addressInfoId && (
+                      <Button size="small" onClick={() => handleSetDefault(address.addressInfoId)}>
+                        设为默认
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -195,12 +222,7 @@ const ShippingPage: React.FC = () => {
           width={600}
           confirmLoading={loading}
         >
-          <Form
-            form={form}
-            layout="vertical"
-            style={{ marginTop: 20 }}
-          >
-
+          <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
             <Form.Item
               label="收件人姓名"
               name="name"
@@ -231,14 +253,8 @@ const ShippingPage: React.FC = () => {
                 { max: 200, message: '地址不能超过200个字符' },
               ]}
             >
-              <Input.TextArea
-                rows={3}
-                placeholder="请输入详细地址"
-                showCount
-                maxLength={200}
-              />
+              <Input.TextArea rows={3} placeholder="请输入详细地址" showCount maxLength={200} />
             </Form.Item>
-
           </Form>
         </Modal>
       </main>

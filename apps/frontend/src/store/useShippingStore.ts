@@ -5,11 +5,14 @@ import { commonAxiosInstance } from '../utils/axios';
 
 interface ShippingStore {
     shippingList: AddressInfo[];
+    defaultAddress: AddressInfo | null;
     loading: boolean;
     error: string | null;
 
     // actions
     fetchShippingList: () => Promise<void>;
+    fetchDefaultAddress: () => Promise<void>;
+    setDefaultAddress: (addressInfoId: string) => Promise<void>;
     addShipping: (shipping: CreateAddressRequest) => Promise<AddressInfo>;
     updateShipping: (shipping: UpdateAddressRequest) => Promise<AddressInfo>;
     deleteShipping: (shippingId: string) => Promise<void>;
@@ -17,6 +20,7 @@ interface ShippingStore {
 
 export const useShippingStore = create<ShippingStore>((set) => ({
     shippingList: [],
+    defaultAddress: null,
     loading: false,
     error: null,
 
@@ -29,6 +33,27 @@ export const useShippingStore = create<ShippingStore>((set) => ({
     
         } catch (error) {
             set({ error: error as string });
+        } finally {
+            set({ loading: false });
+        }
+    },
+    fetchDefaultAddress: async () => {
+        try {
+            const response = await commonAxiosInstance.get('/shipping/default');
+            set({ defaultAddress: response.data.data });
+        } catch (error) {
+            // 如果没有默认地址（400），忽略错误
+            set({ defaultAddress: null });
+        }
+    },
+    setDefaultAddress: async (addressInfoId: string) => {
+        set({ loading: true });
+        try {
+            const response = await commonAxiosInstance.post('/shipping/default', { addressInfoId });
+            set({ defaultAddress: response.data.data });
+        } catch (error) {
+            set({ error: error as string });
+            throw error;
         } finally {
             set({ loading: false });
         }
