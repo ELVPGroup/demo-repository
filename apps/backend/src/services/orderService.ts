@@ -431,7 +431,7 @@ export class OrderService {
         if (live) {
           const speedKmh = live.baseSpeedKmh;
           const remainingKm = live.remainingDistanceMeters / 1000;
-          const etaMs = live.remainingDistanceMeters / kmhToMps(speedKmh);
+          const etaMs = (live.remainingDistanceMeters / kmhToMps(speedKmh)) * 1000;
           const elapsedSec = (Date.now() - live.startedAt) / 1000;
           const expectedTraveled = kmhToMps(speedKmh) * elapsedSec;
           const actualTraveled = live.totalDistanceMeters * live.progress;
