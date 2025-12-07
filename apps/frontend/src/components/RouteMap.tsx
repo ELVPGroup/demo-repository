@@ -25,6 +25,10 @@ interface RouteMapProps {
     distance?: number;
     duration?: number;
   };
+
+  // 可选的距离和预计时间
+  distance?: number;
+  estimatedTime?: number;
   
   // 可选的UI配置
   showControls?: boolean;
@@ -45,6 +49,8 @@ const RouteMap: React.FC<RouteMapProps> = ({
   endLocation,
   status,
   currentLocation,
+  distance,
+  estimatedTime,
   routeData = {},
   showControls = true,
   showInfoCard = true,
@@ -140,11 +146,11 @@ const RouteMap: React.FC<RouteMapProps> = ({
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">距离:</span>
-              <span className="font-medium">{mapRouteData.distance} km</span>
+              <span className="font-medium">{distance} km</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">预计时间:</span>
-              <span className="font-medium">{mapRouteData.duration} 天</span>
+              <span className="font-medium">{estimatedTime} </span>
             </div>
           </div>
 
@@ -156,7 +162,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
       )}
 
       {/* 可选的缩放控件 */}
-      {showControls && (
+      {/* {showControls && (
         <div className="absolute right-4 bottom-4 flex flex-col divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white shadow-md">
           <button
             onClick={handleZoomIn}
@@ -173,7 +179,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
             <Minus size={18} />
           </button>
         </div>
-      )}
+      )} */}
 
       {/* 可选的路线进度指示器 */}
       {showProgressIndicator && (

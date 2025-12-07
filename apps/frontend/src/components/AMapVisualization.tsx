@@ -85,6 +85,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   const movingMarkerRef = useRef<any>(null);
   const animationRef = useRef<any>(null);
   const circleRef = useRef<any>(null);
+  const centerMarkerRef = useRef<any>(null);
   const mapMarkersRef = useRef<any[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [routePath, setRoutePath] = useState<LngLat[]>([]);
@@ -203,18 +204,31 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
     circle.setMap(map);
     circleRef.current = circle;
 
-    // 添加中心点标记
+    // 移除之前的中心标记（如果存在），避免残留或错位
+    if (centerMarkerRef.current) {
+      try {
+        map.remove(centerMarkerRef.current);
+      } catch (e) {
+        // ignore
+      }
+      centerMarkerRef.current = null;
+    }
+
+    // 添加中心点标记（设置 offset 以确保图标居中）
+    const markerSize = 25;
     const centerMarker = new AMap.Marker({
       position: center,
       icon: new AMap.Icon({
-        size: new AMap.Size(25, 25),
+        size: new AMap.Size(markerSize, markerSize),
         image:
           'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="25" height="25"><circle cx="12.5" cy="12.5" r="10" fill="%233b82f6" stroke="%23FFFFFF" stroke-width="2"/></svg>',
-        imageSize: new AMap.Size(25, 25),
+        imageSize: new AMap.Size(markerSize, markerSize),
       }),
       title: '配送中心',
+      offset: new AMap.Pixel(-markerSize / 2, -markerSize / 2),
     });
     centerMarker.setMap(map);
+    centerMarkerRef.current = centerMarker;
 
     return circle;
   };
