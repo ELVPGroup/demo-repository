@@ -16,7 +16,7 @@ import { productModel } from '@/models/productModel.js';
 import { addressService } from '@/services/addressService.js';
 import { generateServiceId } from '@/utils/serverIdHandler.js';
 import { ServiceKey } from '@/utils/serverIdHandler.js';
-import { getDictName, orderStatusDict, shippingStatusDict } from '@/utils/dicts.js';
+import { getDictName, orderStatusDict, shippingStatusDict } from '@evlp/shared/utils/dicts.js';
 import {
   getDefinedKeyValues,
   haversineDistanceMeters,
@@ -24,10 +24,11 @@ import {
   // metersPerDegreeLonAtLat,
   parseAmapPolyline,
   kmhToMps,
-} from '@/utils/general.js';
+} from '@evlp/shared/utils/general.js';
 import { logisticsService } from '@/services/logisticsService.js';
-import { amapClient } from '@/amapClient.js';
+import { amapClient } from '@evlp/shared/utils/amapClient.js';
 import dayjs from 'dayjs';
+import type { MapViewport } from '@/types/index.js';
 
 // 订单列表查询时需要包含的关联模型
 const orderModelFindInclude = {
@@ -105,10 +106,6 @@ export class OrderService {
         (acc: number, it: { quantity: number }) => acc + it.quantity,
         0
       );
-      const totalPrice = order.orderItems.reduce(
-        (acc: number, it) => acc + it.quantity * Number(it.product.price),
-        0
-      );
       return {
         orderId: generateServiceId(order.orderId, ServiceKey.order),
         status: getDictName<OrderStatus>(order.status, orderStatusDict),
@@ -116,7 +113,7 @@ export class OrderService {
         userId: generateServiceId(order.userId!, ServiceKey.client),
         merchantId: generateServiceId(order.merchantId!, ServiceKey.merchant),
         amount,
-        totalPrice: totalPrice.toFixed(2),
+        totalPrice: Number(order.totalPrice),
         ...('merchantId' in payload && payload.merchantId !== undefined
           ? { userName: order.user?.name ?? '' }
           : {}),
@@ -131,7 +128,10 @@ export class OrderService {
    * 获取配送区域订单列表
    */
   async getDeliveryAreaOrderList(
-    payload: MerchantOrderListParams & Partial<MerchantOrderListFilterParams>
+    payload: MerchantOrderListParams &
+      Partial<MerchantOrderListFilterParams> & {
+        mapViewport?: MapViewport;
+      }
   ) {
     // 查找商家之前配置的配送区域
     const deliveryArea = await prisma.deliveryArea.findUnique({
@@ -147,29 +147,38 @@ export class OrderService {
       where['status'] = payload.status;
     }
 
+    if (payload.mapViewport) {
+      const [p1, p2] = payload.mapViewport;
+      // 无论p1、p2的顺序，都确保构建出矩形边界
+      // 经度范围构建
+      const minLng = Math.min(p1[0], p2[0]);
+      const maxLng = Math.max(p1[0], p2[0]);
+      // 纬度范围构建
+      const minLat = Math.min(p1[1], p2[1]);
+      const maxLat = Math.max(p1[1], p2[1]);
+
+      if (minLng === maxLng || minLat === maxLat) {
+        throw new Error('无效的地图视口：经度或纬度不能相同');
+      }
+
+      where['detail'] = {
+        is: {
+          addressTo: {
+            is: {
+              longitude: { gte: minLng, lte: maxLng },
+              latitude: { gte: minLat, lte: maxLat },
+            },
+          },
+        },
+      };
+    }
+
     let ordersRaw: AreaOrderListPayload[] = [];
 
     // 配送区域中心点与半径处理
     const centerLon = Number(deliveryArea.longitude);
     const centerLat = Number(deliveryArea.latitude);
     const radiusMeters = Number(deliveryArea.radius);
-
-    // // 根据半径计算纬度方向上的最大偏移量
-    // const latDelta = radiusMeters / METERS_PER_DEGREE_LAT;
-    // // 根据当前纬度计算经度方向上的最大偏移量（经度1°长度随纬度变化）
-    // const lonDelta = radiusMeters / metersPerDegreeLonAtLat(centerLat);
-
-    // // 先使用矩形边界做粗筛，减少后续精确计算量
-    // where['detail'] = {
-    //   is: {
-    //     addressTo: {
-    //       is: {
-    //         longitude: { gte: centerLon - lonDelta, lte: centerLon + lonDelta },
-    //         latitude: { gte: centerLat - latDelta, lte: centerLat + latDelta },
-    //       },
-    //     },
-    //   },
-    // };
 
     ordersRaw = (await orderModel.findMany({
       where,
@@ -178,13 +187,6 @@ export class OrderService {
       ...(payload.sort && payload.sortBy ? { orderBy: { [payload.sortBy]: payload.sort } } : {}),
       include: areaOrderModelFindInclude,
     })) as AreaOrderListPayload[];
-
-    // ordersRaw = ordersRaw.filter((o) => {
-    //   const to = o.detail?.addressTo;
-    //   if (!to) return false;
-    //   const d = haversineDistanceMeters([centerLon, centerLat], [to.longitude, to.latitude]);
-    //   return d <= radiusMeters;
-    // });
 
     return ordersRaw.map((order) => {
       const to = order.detail?.addressTo;
@@ -197,10 +199,6 @@ export class OrderService {
         (acc: number, it: { quantity: number }) => acc + it.quantity,
         0
       );
-      const totalPrice = order.orderItems.reduce(
-        (acc: number, it) => acc + it.quantity * Number(it.product.price),
-        0
-      );
       return {
         orderId: generateServiceId(order.orderId, ServiceKey.order),
         status: getDictName<OrderStatus>(order.status, orderStatusDict),
@@ -208,7 +206,7 @@ export class OrderService {
         userId: generateServiceId(order.userId!, ServiceKey.client),
         merchantId: generateServiceId(order.merchantId!, ServiceKey.merchant),
         amount,
-        totalPrice: Number(totalPrice).toFixed(2),
+        totalPrice: Number(order.totalPrice),
         ...(location ? { location } : {}),
         ...(distance !== undefined ? { distance, distanceKm: distance / 1000 } : {}),
         inRange,
@@ -246,6 +244,9 @@ export class OrderService {
       if (!product) {
         throw new Error(`商品不存在: ${item.productId}`);
       }
+      if (product.amount < item.quantity) {
+        throw new Error(`商品库存不足: ${product.name}`);
+      }
       totalPrice += Number(product.price) * item.quantity;
     }
     // 使用事务保证数据正确建立
@@ -281,6 +282,22 @@ export class OrderService {
           quantity: item.quantity,
         })),
       });
+
+      // 扣减库存
+      for (const item of items) {
+        const updateResult = await tx.product.updateMany({
+          where: {
+            productId: item.productId,
+            amount: { gte: item.quantity },
+          },
+          data: {
+            amount: { decrement: item.quantity },
+          },
+        });
+        if (updateResult.count === 0) {
+          throw new Error(`商品库存不足 (ID: ${item.productId})`);
+        }
+      }
 
       return { orderId: generateServiceId(order.orderId, ServiceKey.order) };
     });
@@ -344,6 +361,20 @@ export class OrderService {
             await tx.product.update({ where: { productId }, data: productUpdate });
           }
         }
+
+        // 重新计算订单总价
+        const currentItems = await tx.orderItem.findMany({
+          where: { orderId },
+          include: { product: true },
+        });
+        const newTotalPrice = currentItems.reduce(
+          (acc, item) => acc + item.quantity * Number(item.product.price),
+          0
+        );
+        await tx.order.update({
+          where: { orderId },
+          data: { totalPrice: newTotalPrice },
+        });
       }
 
       if (changes.length > 0) {
@@ -376,10 +407,6 @@ export class OrderService {
     // 计算订单商品总数和总金额
     const amount = order.orderItems.reduce(
       (acc: number, it: { quantity: number }) => acc + it.quantity,
-      0
-    );
-    const totalPrice = order.orderItems.reduce(
-      (acc, it) => acc + it.quantity * Number(it.product.price),
       0
     );
 
@@ -425,13 +452,14 @@ export class OrderService {
         const etaMs = (distanceKm * 1000) / kmhToMps(speedKmh);
         extras = {
           currentLocation,
-          distance: Number(distanceKm.toFixed(3)),
+          distance: Number(distanceKm),
           estimatedTime: dayjs(Date.now() + etaMs).format('YYYY-MM-DD HH:mm:ss'),
           isTimeRisk: false,
         };
       } else if (statusVal === 'SHIPPED') {
-        const live = logisticsService.getShipmentState(order.orderId);
+        const live = await logisticsService.getShipmentState(order.orderId);
         if (live) {
+          console.log('live State:', live);
           const speedKmh = live.baseSpeedKmh;
           const remainingKm = live.remainingDistanceMeters / 1000;
           const etaMs = (live.remainingDistanceMeters / kmhToMps(speedKmh)) * 1000;
@@ -441,7 +469,7 @@ export class OrderService {
           const isRisk = actualTraveled < expectedTraveled * 0.85;
           extras = {
             currentLocation: live.location,
-            distance: Number(remainingKm.toFixed(3)),
+            distance: Number(remainingKm),
             estimatedTime: dayjs(Date.now() + etaMs).format('YYYY-MM-DD HH:mm:ss'),
             isTimeRisk: isRisk,
           };
@@ -483,7 +511,7 @@ export class OrderService {
         description: orderItem.product.description ?? '',
       })),
       amount,
-      totalPrice,
+      totalPrice: Number(order.totalPrice),
       shippingStatus: latest ? getDictName(latest.shippingStatus, shippingStatusDict) : undefined,
       timeline: timeline.map((timelineItem) => ({
         shippingStatus: getDictName(timelineItem.shippingStatus, shippingStatusDict),

@@ -63,6 +63,9 @@ importers:
 
   apps/backend:
     dependencies:
+      '@evlp/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@koa/bodyparser':
         specifier: ^6.0.0
         version: 6.0.0(koa@3.1.1)
@@ -81,9 +84,6 @@ importers:
       '@prisma/client':
         specifier: ^7.0.0
         version: 7.0.1(prisma@7.0.1(@types/react@19.2.7)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3))(typescript@5.9.3)
-      '@types/koa__multer':
-        specifier: ^2.0.8
-        version: 2.0.8
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -127,6 +127,9 @@ importers:
       '@types/koa__cors':
         specifier: ^5.0.1
         version: 5.0.1
+      '@types/koa__multer':
+        specifier: ^2.0.8
+        version: 2.0.8
       '@types/koa__router':
         specifier: ^12.0.5
         version: 12.0.5
@@ -200,6 +203,73 @@ importers:
       vite:
         specifier: ^7.2.4
         version: 7.2.4(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.20.6)
+
+  apps/simulation-service:
+    dependencies:
+      '@evlp/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      '@koa/bodyparser':
+        specifier: ^6.0.0
+        version: 6.0.0(koa@3.1.1)
+      '@koa/cors':
+        specifier: ^5.0.0
+        version: 5.0.0
+      '@koa/router':
+        specifier: ^14.0.0
+        version: 14.0.0
+      dayjs:
+        specifier: ^1.11.19
+        version: 1.11.19
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
+      koa:
+        specifier: ^3.1.1
+        version: 3.1.1
+      koa-logger:
+        specifier: ^4.0.0
+        version: 4.0.0
+    devDependencies:
+      '@types/koa':
+        specifier: ^3.0.1
+        version: 3.0.1
+      '@types/koa-logger':
+        specifier: ^3.1.5
+        version: 3.1.5
+      '@types/koa__cors':
+        specifier: ^5.0.1
+        version: 5.0.1
+      '@types/koa__router':
+        specifier: ^12.0.5
+        version: 12.0.5
+      '@types/node':
+        specifier: ^24.10.1
+        version: 24.10.1
+      nodemon:
+        specifier: ^3.1.11
+        version: 3.1.11
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      tsx:
+        specifier: ^4.20.6
+        version: 4.20.6
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+
+  packages/shared:
+    devDependencies:
+      '@types/koa':
+        specifier: ^3.0.1
+        version: 3.0.1
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
 
 packages:
 

@@ -5,12 +5,16 @@ import ProductGrid from '../../components/clientComponents/product/ProductGrid';
 import { clientAxiosInstance } from '@/utils/axios';
 import type { ClientProduct } from '@/types/product';
 import ClientTopBar from '@/components/clientComponents/ClientTopBar';
+import { useCartStore } from '@/store/useCartStore';
+import { useSearchStore } from '@/store/useSearchStore';
 
 function ProductsPage() {
   const [products, setProducts] = useState<ClientProduct[]>([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const { syncCartWithProducts } = useCartStore();
+  const { searchQuery } = useSearchStore();
 
   const totalItems = useMemo(() => products.length, [products]);
 
@@ -18,16 +22,30 @@ function ProductsPage() {
     setLoading(true);
     try {
       const offset = (page - 1) * pageSize;
-      const res = await clientAxiosInstance.post('/products/list', { limit: pageSize, offset });
+      const res = await clientAxiosInstance.post('/products/list', {
+        limit: pageSize,
+        offset,
+        productName: searchQuery,
+      });
       const list = (res.data?.data || []) as ClientProduct[];
       setProducts(list);
+      // 同步更新购物车中的商品状态
+      syncCartWithProducts(list);
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize]);
+  }, [page, pageSize, syncCartWithProducts, searchQuery]);
 
   useEffect(() => {
     fetchProducts();
+    // 监听商品更新事件（如下单成功后）
+    const handleProductsUpdated = () => {
+      fetchProducts();
+    };
+    window.addEventListener('products-updated', handleProductsUpdated);
+    return () => {
+      window.removeEventListener('products-updated', handleProductsUpdated);
+    };
   }, [fetchProducts]);
 
   return (

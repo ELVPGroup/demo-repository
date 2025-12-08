@@ -13,6 +13,8 @@ interface AMapVisualizationProps {
   showRoute?: boolean;
   currentLocation?: LngLat;
   animateRoute?: boolean;
+  animationDurationMs?: number;
+  currentLocationOffsetX?: number;
 }
 
 // 配置高德地图安全密钥
@@ -79,11 +81,14 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   showRoute = false,
   currentLocation,
   animateRoute = true,
+  animationDurationMs = 30,
+  currentLocationOffsetX = 6,
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const amapRef = useRef<any>(null);
   const movingMarkerRef = useRef<any>(null);
   const animationRef = useRef<any>(null);
+  const currentLocationMarkerRef = useRef<any>(null);
   const circleRef = useRef<any>(null);
   const centerMarkerRef = useRef<any>(null);
   const mapMarkersRef = useRef<any[]>([]);
@@ -92,7 +97,12 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
 
   // 轨迹动画
   const startRouteAnimation = (AMap: any, map: any, path: LngLat[], currentLocation?: LngLat) => {
-    if (!path.length || !animateRoute) return;
+    console.debug('startRouteAnimation called', { pathLength: path.length, animateRoute, currentLocation });
+    // console.log('startRouteAnimation called', path);
+    if (!path.length || !animateRoute) {
+      console.debug('startRouteAnimation aborted: no path or animateRoute disabled');
+      return;
+    }
 
     // 清除之前的动画
     if (animationRef.current) {
@@ -102,21 +112,25 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       map.remove(movingMarkerRef.current);
     }
 
-    // 先根据 currentLoc 找到起始索引（若提供），否则从 0 开始
+    // 动画目标：如果提供 currentLocation，则把动画从起点(0)走到与 currentLocation 最近的路径点
     let startIndex = 0;
+    let endIndex = 0;
+    // 修改确定 endIndex 的逻辑
     if (currentLocation) {
       let minDist = Infinity;
       let minIdx = 0;
       for (let i = 0; i < path.length; i++) {
-        const dx = path[i][0] - currentLocation[0];
-        const dy = path[i][1] - currentLocation[1];
+        const dx = path[i].lng - currentLocation[0];
+        const dy = path[i].lat - currentLocation[1];
         const d = dx * dx + dy * dy;
         if (d < minDist) {
           minDist = d;
           minIdx = i;
         }
       }
-      startIndex = minIdx;
+      endIndex = minIdx;
+      startIndex = Math.max(0, endIndex - 500); // 最多回溯500个点以加快动画
+      console.debug('Determined endIndex for animation based on currentLocation:', startIndex, endIndex);
     }
 
     // 创建移动的圆点标记（从计算的起始位置开始）
@@ -135,13 +149,15 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
     map.add(movingMarker);
     movingMarkerRef.current = movingMarker;
 
-    // 计算中间位置,走到的位置
-    const middleIndex = startIndex;
+    // 计算动画的结束索引（endIndex 可能等于 startIndex）
+    const middleIndex = endIndex;
 
+    console.log('Route animation from index', startIndex, 'to', middleIndex);
     let currentIndex = startIndex;
     const totalSteps = Math.max(1, middleIndex - startIndex);
-    const animationDuration = 3000;
-
+    const animationDuration = animationDurationMs;
+    const stepTime = Math.max(5, Math.floor(animationDuration / Math.max(1, totalSteps)));
+    console.debug('route animation timing', { totalSteps, animationDuration, stepTime });
     const animate = () => {
       if (currentIndex <= middleIndex) {
         const currentPoint = path[currentIndex];
@@ -154,7 +170,6 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
       }
     };
 
-    const stepTime = animationDuration / totalSteps;
     animationRef.current = setInterval(animate, stepTime);
   };
 
@@ -239,6 +254,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
     map: any,
     markers: Array<{ id: string; position: LngLat; color?: string }>
   ) => {
+    // console.debug('drawMarkers called, markers count:', markers?.length, 'first:', markers?.[0]);
     // 清除现有标记
     mapMarkersRef.current.forEach((marker) => {
       map.remove(marker);
@@ -399,17 +415,31 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
 
   // 绘制当前位置标记
   const drawCurrentLocation = (AMap: any, map: any, location: LngLat) => {
+    // 移除旧的当前位置标记，避免重复
+    if (currentLocationMarkerRef.current) {
+      try {
+        map.remove(currentLocationMarkerRef.current);
+      } catch (e) {
+        // ignore
+      }
+      currentLocationMarkerRef.current = null;
+    }
+
+    const size = 20;
     const currentLocationMarker = new AMap.Marker({
       position: location,
       icon: new AMap.Icon({
-        size: new AMap.Size(30, 30),
+        size: new AMap.Size(size, size),
         image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
-        imageSize: new AMap.Size(30, 30),
+        imageSize: new AMap.Size(size, size),
       }),
       title: '当前位置',
+      // 偏移量：水平向左半个宽度，垂直向上整个高度，使图标底部与坐标对齐
+      offset: new AMap.Pixel(-size / 2 - currentLocationOffsetX, -size),
     });
 
     map.add(currentLocationMarker);
+    currentLocationMarkerRef.current = currentLocationMarker;
   };
 
   // 初始化地图

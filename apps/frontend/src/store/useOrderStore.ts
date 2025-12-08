@@ -20,14 +20,12 @@ interface OrderStore {
 
 export const useOrderStore = create<OrderStore>((set, get) => ({
   params: {
-    status: '',
-    customerName: '',
-    orderId: '',
-    productName: '',
-    limit: 10,
-    offset: 0,
     sort: 'asc',
     sortBy: 'createdAt',
+    limit: 10,
+    offset: 0,
+    status: '',
+    customerName: ''
   },
   orders: [],
   total: 0,
@@ -38,7 +36,7 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
       params: { ...state.params, ...newParams },
     })),
 
-  fetchOrders: debounced(
+  fetchOrders: 
     async () => {
       set({ loading: true });
       try {
@@ -70,7 +68,4 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
         set({ loading: false });
       }
     },
-    500,
-    true
-  ),
 }));

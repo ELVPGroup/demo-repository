@@ -152,7 +152,7 @@ function CartSidebar({ open, onClose }: CartSidebarProps) {
   const { products, totalPrice, totalQuantity, isEmpty, clearCart, removeProductsByMerchantIds } =
     useCartStore();
 
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [address, setAddress] = useState<AddressInfo | null>(null);
 
   const setDefaultAddress = (address: AddressInfo) => {
@@ -197,8 +197,6 @@ function CartSidebar({ open, onClose }: CartSidebarProps) {
     )
   );
 
-  console.log(merchantGroups);
-
   const handleCheckout = async () => {
     if (isEmpty) {
       message.info('购物车为空');
@@ -240,6 +238,8 @@ function CartSidebar({ open, onClose }: CartSidebarProps) {
         onClose();
         message.success('订单创建成功');
       }
+      // 广播商品更新事件，通知 ProductsPage 刷新商品列表
+      window.dispatchEvent(new Event('products-updated'));
     } catch (error) {
       console.error('Checkout error:', error);
       // 如果是网络错误或其他非业务逻辑错误，保留购物车状态

@@ -2,7 +2,7 @@ import type { Context } from 'koa';
 import { orderService } from '@/services/orderService.js';
 import { addressModel } from '@/models/addressModel.js';
 import { extractRoleId } from '@/utils/roleHandler.js';
-import { type SortParams, type PaginationParams } from '@/types/index.js';
+import { type SortParams, type PaginationParams, type MapViewport } from '@/types/index.js';
 import type {
   OrderStatus,
   UpdateOrderBody,
@@ -11,9 +11,9 @@ import type {
 } from '@/types/order.js';
 import type { CreateOrderBody } from '@/types/order.js';
 import { parseServiceId } from '@/utils/serverIdHandler.js';
-import { getDictKey, orderStatusDict } from '@/utils/dicts.js';
+import { getDictKey, orderStatusDict } from '@evlp/shared/utils/dicts.js';
 import type { UpdateOrderServicePayload } from '@/types/order.js';
-import { getDefinedKeyValues, getTruthyKeyValues } from '@/utils/general.js';
+import { getDefinedKeyValues, getTruthyKeyValues } from '@evlp/shared/utils/general.js';
 
 /**
  * 商家端订单控制器
@@ -56,21 +56,24 @@ export class MerchantOrderController {
    */
   async getDeliveryAreaOrders(ctx: Context): Promise<void> {
     try {
-      const { sort, sortBy, offset, limit, status } = ctx.request.body as {
+      const { sort, sortBy, offset, limit, status, mapViewport } = ctx.request.body as {
         sort?: 'asc' | 'desc';
         sortBy?: string;
         offset?: number;
         limit?: number;
         status?: string;
+        mapViewport?: MapViewport;
       };
 
       const mappedStatus = status ? getDictKey(status, orderStatusDict) : undefined;
-      const params: MerchantOrderListParams & Partial<MerchantOrderListFilterParams> = {
+      const params: MerchantOrderListParams &
+        Partial<MerchantOrderListFilterParams> & { mapViewport?: MapViewport } = {
         ...(extractRoleId(ctx.state['user']) as { merchantId: number }),
         ...(sort && sortBy ? { sort, sortBy } : {}),
         ...(offset !== undefined ? { offset } : {}),
         ...(limit !== undefined ? { limit } : {}),
         ...(mappedStatus ? { status: mappedStatus } : {}),
+        ...(mapViewport ? { mapViewport } : {}),
       };
 
       const result = await orderService.getDeliveryAreaOrderList(params);

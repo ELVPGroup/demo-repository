@@ -190,28 +190,20 @@ export const useDeliveryAreaStore = create<DeliveryAreaStore>((set, get) => ({
         throw new Error("未获取到配送区域数据");
       }
       
-      // 合并当前数据和更新数据（使用 nullish 合并避免将 0 视为缺失）
+      // 合并当前数据和更新数据
       const updateData = {
-        center: data.center ?? currentData.center,
-        radius: data.radius ?? currentData.radius,
+        center: data.center || currentData.center,
+        radius: data.radius || currentData.radius,
       };
-
-      // 如果需要格式化坐标到6位小数，同时对非法输入做容错
-      const formatCoordinates = (coords?: [number, number]) : [number, number] => {
-        if (!coords || !Array.isArray(coords) || coords.length < 2) {
-          // 回退到默认中心，避免抛出错误
-          return DEFAULT_CENTER;
-        }
-
-        const lon = typeof coords[0] === 'number' ? coords[0] : DEFAULT_CENTER[0];
-        const lat = typeof coords[1] === 'number' ? coords[1] : DEFAULT_CENTER[1];
-
+      
+      // 如果需要格式化坐标到6位小数
+      const formatCoordinates = (coords: [number, number]): [number, number] => {
         return [
-          parseFloat(lon.toFixed(6)),
-          parseFloat(lat.toFixed(6)),
+          parseFloat(coords[0].toFixed(6)),
+          parseFloat(coords[1].toFixed(6))
         ];
       };
-
+      
       const formattedUpdateData = {
         ...updateData,
         center: formatCoordinates(updateData.center),

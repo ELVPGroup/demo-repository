@@ -1,177 +1,82 @@
-import type { GeoPoint } from '@/types/index.js';
-import {
-  haversineDistanceMeters,
-  getDefinedKeyValues,
-  parseAmapPolyline,
-  kmhToMps,
-} from '@/utils/general.js';
-import { amapClient } from '@/amapClient.js';
+import type { GeoPoint, SimulationConfig, SimulationState } from '@evlp/shared/types/index.js';
 import { broadcastOrderShipping } from '@/ws/orderSubscriptions.js';
 import prisma from '@/db.js';
-import { getDictName, shippingStatusDict } from '@/utils/dicts.js';
+import { getDictName, shippingStatusDict } from '@evlp/shared/utils/dicts.js';
 import dayjs from 'dayjs';
 
-interface SimulationConfig {
-  speedKmh: number;
-  tickMs: number;
-  variance: number;
-}
+const PUSH_INTERVAL_MS = 5000;
 
-const SHIP_SIM_SPEED_KMH = 40;
-const SHIP_GLOBAL_TICK_MS = 2000;
-const SHIP_SIM_SPEED_VARIANCE = 0.1;
-
-/**
- * 物流模拟服务
- * - 路线获取（基于高德驾车API）
- * - 推送调度（基于 tick 间隔）
- * - 简易速度波动（基于 variance）
- */
 export class LogisticsService {
-  /** 订单活跃模拟列表，用于停止/恢复模拟
-   * key：订单ID
-   * value：订单当前物流状态
-   */
-  private simulations = new Map<
-    number,
-    {
-      startedAt: number;
-      baseSpeedKmh: number;
-      currentIndex: number;
-      totalDistance: number;
-      events: Array<{ point: GeoPoint; targetTime: number; progress: number }>;
-    }
-  >();
-  /** 全局调度计时器（所有模拟共享） */
-  private globalTimer: NodeJS.Timeout | null = null;
-  private globalTickMs = Number(SHIP_GLOBAL_TICK_MS);
+  private serviceUrl = process.env['SIMULATION_SERVICE_URL'] || 'http://localhost:9001';
+  private pollingTimers = new Map<number, NodeJS.Timeout>();
 
-  /** 启动全局定时器 */
-  private startTimer() {
-    if (this.globalTimer) return;
-    this.globalTimer = setInterval(() => this.schedule(), this.globalTickMs);
-  }
-
-  /** 当所有模拟结束时，停止全局定时器 */
-  private stopTimerIfIdle() {
-    if (this.simulations.size === 0 && this.globalTimer) {
-      clearInterval(this.globalTimer);
-      this.globalTimer = null;
-    }
-  }
-
-  /**
-   * 启动发货轨迹模拟并通过 WebSocket 推送
-   * @param orderId 订单ID（数字）
-   * @param origin 起点坐标 [lon, lat]
-   * @param destination 终点坐标 [lon, lat]
-   * @param options 可选配置：speedKmh, tickMs, variance
-   */
   async simulateShipment(
     orderId: number,
     origin: GeoPoint,
     destination: GeoPoint,
     options?: Partial<SimulationConfig>
   ) {
-    if (this.simulations.has(orderId)) {
-      throw new Error('订单ID已存在模拟');
-    }
-    const cfg = Object.assign(
-      {
-        speedKmh: SHIP_SIM_SPEED_KMH,
-        tickMs: SHIP_GLOBAL_TICK_MS,
-        variance: SHIP_SIM_SPEED_VARIANCE,
-      },
-      getDefinedKeyValues(options ?? {})
-    );
-
-    const route = await amapClient.directionDriving(origin, destination);
-    const points = parseAmapPolyline(route.polyline || '');
-
-    if (points.length < 2) {
-      throw new Error('路径点不足');
-    }
-
-    // 计算事件队列（包含进度和目标时间）
-    const events: Array<{ point: GeoPoint; targetTime: number; progress: number }> = [];
-    let traveled = 0; // 已行驶距离（米）
-    let totalDistance = 0; // 总距离（米）
-    let prev: GeoPoint | undefined = points[0]!; // 上一个坐标点
-    for (let i = 1; i < points.length; i++) {
-      const curr = points[i]!;
-      totalDistance += haversineDistanceMeters(prev, curr);
-      prev = curr;
-    }
-    prev = points[0]!;
-    let cumulativeElapsedMs = 0;
-    for (let i = 1; i < points.length; i++) {
-      const a = prev;
-      const b = points[i]!;
-      const dist = haversineDistanceMeters(a, b);
-      // 计算当前段的速度（考虑随机波动）
-      const factor = 1 + (Math.random() * 2 - 1) * cfg.variance;
-      const speedMps = kmhToMps(cfg.speedKmh * factor);
-      const segSeconds = dist / speedMps;
-      const ticks = Math.max(1, Math.ceil((segSeconds * 1000) / cfg.tickMs));
-      for (let k = 1; k <= ticks; k++) {
-        const f = k / ticks;
-        const lon = a![0] + (b![0] - a![0]) * f;
-        const lat = a![1] + (b![1] - a![1]) * f;
-        const stepDist = dist / ticks;
-        traveled += stepDist;
-        const progress = Math.min(1, traveled / totalDistance);
-        cumulativeElapsedMs += (segSeconds * 1000) / ticks;
-        const targetTime = Date.now() + Math.round(cumulativeElapsedMs);
-        events.push({ point: [lon, lat], targetTime, progress });
-      }
-      prev = b;
-    }
-    const startedAt = Date.now();
-    this.simulations.set(orderId, {
-      startedAt,
-      baseSpeedKmh: cfg.speedKmh,
-      currentIndex: 0,
-      totalDistance,
-      events,
+    // 调用模拟服务启动模拟
+    const response = await fetch(`${this.serviceUrl}/simulations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId,
+        origin,
+        destination,
+        options,
+      }),
     });
-    this.startTimer();
-  }
 
-  /** 停止指定订单的模拟（如果是最后一个模拟，清理全局定时器） */
-  stopSimulation(orderId: number) {
-    const sim = this.simulations.get(orderId);
-    if (!sim) return;
-    this.simulations.delete(orderId);
-    this.stopTimerIfIdle();
-  }
-
-  /** 全局调度：遍历所有模拟，按时推送事件 */
-  private async schedule() {
-    const now = Date.now();
-    for (const [orderId, state] of this.simulations.entries()) {
-      while (state.currentIndex < state.events.length) {
-        const event = state.events[state.currentIndex]!;
-        if (event.targetTime > now) break;
-        // 模拟订单状态更新
-        const status =
-          event.progress <= 0 ? 'PACKING' : event.progress < 1 ? 'SHIPPED' : 'DELIVERED';
-        broadcastOrderShipping(orderId, {
-          location: event.point,
-          timestamp: dayjs(now).format('YYYY-MM-DD HH:mm:ss'),
-          status: getDictName(status as keyof typeof shippingStatusDict, shippingStatusDict),
-          progress: event.progress,
-        });
-        state.currentIndex++;
-      }
-      if (state.currentIndex >= state.events.length) {
-        await this.handleDelivered(orderId);
-        this.simulations.delete(orderId);
-      }
+    if (!response.ok) {
+      throw new Error(`Simulation service error: ${response.statusText}`);
     }
-    this.stopTimerIfIdle();
+
+    this.startPolling(orderId);
   }
 
-  /** 送达时更新订单状态与时间线 */
+  private startPolling(orderId: number) {
+    if (this.pollingTimers.has(orderId)) return;
+
+    const timer = setInterval(() => this.pollShipment(orderId), PUSH_INTERVAL_MS);
+    this.pollingTimers.set(orderId, timer);
+  }
+
+  private async pollShipment(orderId: number) {
+    const state = await this.getShipmentState(orderId);
+    if (!state) {
+      // Simulation might have been stopped externally or lost
+      this.stopPolling(orderId);
+      return;
+    }
+
+    const now = Date.now();
+    const status = state.progress <= 0 ? 'PACKING' : state.progress < 1 ? 'SHIPPED' : 'DELIVERED';
+
+    // 广播轨迹更新
+    broadcastOrderShipping(orderId, {
+      location: state.location,
+      timestamp: dayjs(now).format('YYYY-MM-DD HH:mm:ss'),
+      status: getDictName(status as keyof typeof shippingStatusDict, shippingStatusDict),
+      progress: state.progress,
+    });
+
+    if (state.progress >= 1) {
+      await this.handleDelivered(orderId);
+      this.stopPolling(orderId);
+      // 停止模拟
+      this.stopSimulation(orderId);
+    }
+  }
+
+  private stopPolling(orderId: number) {
+    const timer = this.pollingTimers.get(orderId);
+    if (timer) {
+      clearInterval(timer);
+      this.pollingTimers.delete(orderId);
+    }
+  }
+
   private async handleDelivered(orderId: number) {
     await prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { orderId }, data: { status: 'COMPLETED' } });
@@ -185,27 +90,25 @@ export class LogisticsService {
     });
   }
 
-  getShipmentState(orderId: number) {
-    const s = this.simulations.get(orderId);
-    if (!s) return null;
-    const now = Date.now();
-    let idx = s.currentIndex;
-    while (idx < s.events.length && s.events[idx]!.targetTime <= now) idx++;
-    idx = Math.max(0, Math.min(idx - 1, s.events.length - 1));
-    const e = s.events[idx]!;
-    const progress = e.progress;
-    const total = s.totalDistance;
-    const remaining = Math.max(0, total * (1 - progress));
-    const lastTarget = s.events.length > 0 ? s.events[s.events.length - 1]!.targetTime : now;
-    return {
-      location: e.point,
-      progress,
-      totalDistanceMeters: total,
-      remainingDistanceMeters: remaining,
-      startedAt: s.startedAt,
-      baseSpeedKmh: s.baseSpeedKmh,
-      plannedArrivalTime: lastTarget,
-    };
+  stopSimulation(orderId: number) {
+    this.stopPolling(orderId);
+    fetch(`${this.serviceUrl}/simulations/${orderId}`, {
+      method: 'DELETE',
+    }).catch((err) => console.error('Failed to stop simulation', err));
+  }
+
+  async getShipmentState(orderId: number) {
+    try {
+      const response = await fetch(`${this.serviceUrl}/simulations/${orderId}`);
+      if (response.status === 404) return null;
+      if (!response.ok) return null;
+      const data = (await response.json()) as SimulationState;
+      console.log('Shipment state:', data);
+      return data;
+    } catch (e) {
+      console.error('Failed to get shipment state', e);
+      return null;
+    }
   }
 }
 

@@ -1,6 +1,7 @@
 import { MessageTypeEnum, useWebSocket } from '@/hooks/useWebSocket';
 import { useEffect, useState } from 'react';
 import { Card, Tag, List } from 'antd';
+import { useParams } from 'react-router';
 
 interface Message {
   type: MessageTypeEnum;
@@ -16,7 +17,7 @@ function DemoWebSocketPage() {
     setMessages((prev) => [...prev, msg as Message])
   );
 
-  const orderId = 'ORD-000001';
+  const orderId = useParams().orderId;
   useEffect(() => {
     if (!connected) {
       return;
@@ -27,12 +28,12 @@ function DemoWebSocketPage() {
       // 销毁时取消订阅物流更新
       sendMessage(MessageTypeEnum.ShippingUnsubscribe, orderId);
     };
-  }, [sendMessage, connected]);
+  }, [sendMessage, connected, orderId]);
 
   return (
     <div style={{ padding: 24 }}>
       <Card
-        title="WebSocket 演示"
+        title={`WebSocket 演示 - 订单 ${orderId}`}
         extra={<Tag color={connected ? 'green' : 'red'}>{connected ? '已连接' : '未连接'}</Tag>}
       >
         <List

@@ -96,10 +96,14 @@ class ProductService {
    * 客户端商品列表
    * @param params 分页参数
    */
-  async listClient(params: { limit?: number; offset?: number }) {
+  async listClient(params: { limit?: number; offset?: number; productName?: string }) {
+    console.log('service params', params);
     const products = await prisma.product.findMany({
       ...(params.offset !== undefined ? { skip: params.offset } : {}),
       ...(params.limit !== undefined ? { take: params.limit } : {}),
+      ...(params.productName !== undefined
+        ? { where: { name: { contains: params.productName } } }
+        : {}),
       orderBy: { productId: 'desc' },
       include: { merchant: { select: { name: true } } },
     });
