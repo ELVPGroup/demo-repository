@@ -19,6 +19,8 @@ interface CartState {
   updateProductQuantity: (productId: string, newProductQuantity: number) => void;
   // 移除多个商家的商品
   removeProductsByMerchantIds: (merchantIds: string[]) => void;
+  // 同步购物车商品状态
+  syncCartWithProducts: (latestProducts: ClientProduct[]) => void;
 }
 
 const updateTotalPrice = (products: ClientProduct[]) => {
@@ -97,6 +99,40 @@ export const useCartStore = create<CartState>()(
       removeProductsByMerchantIds: (merchantIds: string[]) =>
         set((state) => {
           const nextProducts = state.products.filter((p) => !merchantIds.includes(p.merchantId));
+          return deriveState(nextProducts);
+        }),
+
+      syncCartWithProducts: (latestProducts: ClientProduct[]) =>
+        set((state) => {
+          let hasChanges = false;
+          const nextProducts = state.products.map((cartItem) => {
+            const latest = latestProducts.find((p) => p.productId === cartItem.productId);
+            if (!latest) return cartItem;
+
+            // 检查是否有属性变化（价格、库存、名称、描述、图片、商家名）
+            const compareKeys: (keyof ClientProduct)[] = [
+              'price',
+              'amount',
+              'name',
+              'description',
+              'imageUrl',
+              'merchantName',
+            ];
+            const isDifferent = compareKeys.some((key) => cartItem[key] !== latest[key]);
+
+            if (isDifferent) {
+              hasChanges = true;
+              // 更新属性，并重新校验数量（库存可能减少）
+              return {
+                ...cartItem,
+                ...latest,
+                quantity: sanitizeQuantity(cartItem.quantity, latest),
+              };
+            }
+            return cartItem;
+          });
+
+          if (!hasChanges) return state;
           return deriveState(nextProducts);
         }),
     }),

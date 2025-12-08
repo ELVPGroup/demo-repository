@@ -240,6 +240,8 @@ function CartSidebar({ open, onClose }: CartSidebarProps) {
         onClose();
         message.success('订单创建成功');
       }
+      // 广播商品更新事件，通知 ProductsPage 刷新商品列表
+      window.dispatchEvent(new Event('products-updated'));
     } catch (error) {
       console.error('Checkout error:', error);
       // 如果是网络错误或其他非业务逻辑错误，保留购物车状态

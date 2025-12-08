@@ -238,6 +238,9 @@ export class OrderService {
       if (!product) {
         throw new Error(`商品不存在: ${item.productId}`);
       }
+      if (product.amount < item.quantity) {
+        throw new Error(`商品库存不足: ${product.name}`);
+      }
       totalPrice += Number(product.price) * item.quantity;
     }
     // 使用事务保证数据正确建立
@@ -273,6 +276,22 @@ export class OrderService {
           quantity: item.quantity,
         })),
       });
+
+      // 扣减库存
+      for (const item of items) {
+        const updateResult = await tx.product.updateMany({
+          where: {
+            productId: item.productId,
+            amount: { gte: item.quantity },
+          },
+          data: {
+            amount: { decrement: item.quantity },
+          },
+        });
+        if (updateResult.count === 0) {
+          throw new Error(`商品库存不足 (ID: ${item.productId})`);
+        }
+      }
 
       return { orderId: generateServiceId(order.orderId, ServiceKey.order) };
     });
