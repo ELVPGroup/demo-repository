@@ -16,7 +16,7 @@ import { productModel } from '@/models/productModel.js';
 import { addressService } from '@/services/addressService.js';
 import { generateServiceId } from '@/utils/serverIdHandler.js';
 import { ServiceKey } from '@/utils/serverIdHandler.js';
-import { getDictName, orderStatusDict, shippingStatusDict } from '@/utils/dicts.js';
+import { getDictName, orderStatusDict, shippingStatusDict } from '@evlp/shared/utils/dicts.js';
 import {
   getDefinedKeyValues,
   haversineDistanceMeters,
@@ -24,9 +24,9 @@ import {
   // metersPerDegreeLonAtLat,
   parseAmapPolyline,
   kmhToMps,
-} from '@/utils/general.js';
+} from '@evlp/shared/utils/general.js';
 import { logisticsService } from '@/services/logisticsService.js';
-import { amapClient } from '@/amapClient.js';
+import { amapClient } from '@evlp/shared/utils/amapClient.js';
 import dayjs from 'dayjs';
 
 // 订单列表查询时需要包含的关联模型
@@ -451,8 +451,9 @@ export class OrderService {
           isTimeRisk: false,
         };
       } else if (statusVal === 'SHIPPED') {
-        const live = logisticsService.getShipmentState(order.orderId);
+        const live = await logisticsService.getShipmentState(order.orderId);
         if (live) {
+          console.log('live State:', live);
           const speedKmh = live.baseSpeedKmh;
           const remainingKm = live.remainingDistanceMeters / 1000;
           const etaMs = (live.remainingDistanceMeters / kmhToMps(speedKmh)) * 1000;

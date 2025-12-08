@@ -1,4 +1,4 @@
-import type { GeoPoint } from './types/index.js';
+import type { GeoPoint } from '../types/index.js';
 
 /**
  * 高德 WebAPI 客户端（服务端调用）
@@ -23,7 +23,7 @@ type ReverseGeocodeResponse = AMapBaseResponse & {
 };
 
 /** 驾车路径规划响应 */
-type DirectionDrivingResponse = AMapBaseResponse & {
+export type DirectionDrivingResponse = AMapBaseResponse & {
   route?: {
     paths?: Array<{
       distance?: string;
@@ -33,7 +33,7 @@ type DirectionDrivingResponse = AMapBaseResponse & {
   };
 };
 
-class AMapClient {
+export class AMapClient {
   private base = 'https://restapi.amap.com';
   private key = process.env['AMAP_API_KEY'] || '';
 
@@ -98,26 +98,18 @@ class AMapClient {
    * @param origin 起点坐标（经度, 纬度）
    * @param destination 终点坐标（经度, 纬度）
    * @param strategy 策略（高德驾车策略编码，可选）
-   * @returns `distance`: 距离（米）、`distanceKm`: 距离（千米）、`duration`: 时长（秒）、`polyline`: 路径折线、`raw`: 原始响应
    */
-  async directionDriving(origin: GeoPoint, destination: GeoPoint, strategy?: string) {
+  async directionDriving(origin: GeoPoint, destination: GeoPoint, strategy?: number) {
     const data = await this.request<DirectionDrivingResponse>('/v3/direction/driving', {
       origin: `${origin[0]},${origin[1]}`,
       destination: `${destination[0]},${destination[1]}`,
-      ...(strategy ? { strategy } : {}),
+      ...(strategy !== undefined ? { strategy: String(strategy) } : {}),
     });
-    const path = data.route?.paths?.[0];
-    const distance = path?.distance ? Number(path.distance) : undefined;
-    const duration = path?.duration ? Number(path.duration) : undefined;
-    const poly = (path?.steps || [])
-      .map((s) => s.polyline || '')
-      .filter(Boolean)
-      .join(';');
+    const route = data.route?.paths?.[0];
     return {
-      distance,
-      distanceKm: distance ? distance / 1000 : undefined,
-      duration,
-      polyline: poly,
+      distance: Number(route?.distance || 0),
+      duration: Number(route?.duration || 0),
+      polyline: route?.steps?.map((step) => step.polyline).join(';') || '',
       raw: data,
     };
   }

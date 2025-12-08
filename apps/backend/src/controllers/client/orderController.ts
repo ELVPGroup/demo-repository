@@ -4,7 +4,7 @@ import { extractRoleId } from '@/utils/roleHandler.js';
 import { type SortParams, type PaginationParams } from '@/types/index.js';
 import type { ClientOrderListFilterParams, ClientOrderListParams } from '@/types/order.js';
 import { generateServiceId, parseServiceId, ServiceKey } from '@/utils/serverIdHandler.js';
-import { getTruthyKeyValues } from '@/utils/general.js';
+import { getTruthyKeyValues } from '@evlp/shared/utils/general.js';
 
 /**
  * 用户端订单控制器

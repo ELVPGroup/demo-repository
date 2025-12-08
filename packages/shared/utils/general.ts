@@ -1,6 +1,6 @@
 // 通用工具函数
 
-import type { GeoPoint } from '@/types/index.js';
+import type { GeoPoint } from '../types/index.js';
 
 /**
  * 获取对象中非 null 或 undefined 的字段

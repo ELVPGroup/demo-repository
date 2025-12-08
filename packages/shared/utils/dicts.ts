@@ -1,4 +1,4 @@
-import type { OrderStatus, ShippingStatus } from 'generated/prisma/enums.js';
+import type { OrderStatus, ShippingStatus } from '../types/index.js';
 
 // 订单状态字典
 export const orderStatusDict: Record<OrderStatus, string> = {
