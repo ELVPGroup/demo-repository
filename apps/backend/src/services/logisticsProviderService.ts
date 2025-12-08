@@ -111,6 +111,35 @@ class LogisticsProviderService {
       logisticsId: generateServiceId(provider.logisticsId, ServiceKey.logisticsProvider),
     };
   }
+
+  /**
+   * 商家取消注册物流供应商
+   */
+  async unregister(payload: { merchantId: number; logisticsId: number }) {
+    const provider = await prisma.logisticsProvider.findUnique({
+      where: { logisticsId: payload.logisticsId },
+      include: { merchants: { where: { merchantId: payload.merchantId } } },
+    });
+
+    if (!provider) {
+      throw new Error('物流供应商不存在');
+    }
+
+    if (provider.merchants.find((m) => m.merchantId === payload.merchantId) === undefined) {
+      throw new Error('商家未注册该物流供应商');
+    }
+
+    await prisma.logisticsProvider.update({
+      where: { logisticsId: payload.logisticsId },
+      data: {
+        merchants: { disconnect: { merchantId: payload.merchantId } },
+      },
+    });
+
+    return {
+      logisticsId: generateServiceId(provider.logisticsId, ServiceKey.logisticsProvider),
+    };
+  }
 }
 
 export const logisticsProviderService = new LogisticsProviderService();

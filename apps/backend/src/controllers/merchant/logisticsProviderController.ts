@@ -111,6 +111,40 @@ class MerchantLogisticsProviderController {
       ctx.body = { _message: error instanceof Error ? error.message : '注册物流供应商失败' };
     }
   }
+
+  /**
+   * 商家取消注册物流供应商
+   */
+  async unregister(ctx: Context): Promise<void> {
+    try {
+      const { logisticsId } = ctx.request.body as { logisticsId?: string };
+      const merchantId = (extractRoleId(ctx.state['user']) as { merchantId: number }).merchantId;
+
+      if (!logisticsId) {
+        ctx.status = 400;
+        ctx.body = { _message: '物流供应商ID无效' };
+        return;
+      }
+
+      const numericLogisticsId = parseServiceId(logisticsId).id;
+      if (!Number.isInteger(numericLogisticsId) || numericLogisticsId <= 0) {
+        ctx.status = 400;
+        ctx.body = { _message: '物流供应商ID格式错误' };
+        return;
+      }
+
+      const result = await logisticsProviderService.unregister({
+        merchantId,
+        logisticsId: numericLogisticsId,
+      });
+
+      ctx.status = 200;
+      ctx.body = { _data: result, _message: '取消注册物流供应商成功' };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = { _message: error instanceof Error ? error.message : '取消注册物流供应商失败' };
+    }
+  }
 }
 
 export const merchantLogisticsProviderController = new MerchantLogisticsProviderController();
