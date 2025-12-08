@@ -190,7 +190,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
               <div className="mt-1 text-xs text-gray-500">{startLocation.name}</div>
             </div>
             <div className="relative h-0.5 flex-1 bg-gray-200">
-              <div className="absolute top-0 left-0 h-full w-3/4 bg-blue-500"></div>
+              <div className="absolute top-0 left-0 h-full w-1/4 bg-blue-500"></div>
             </div>
             <div className="flex flex-col items-center">
               <div className="h-2.5 w-2.5 rounded-full bg-blue-500"></div>

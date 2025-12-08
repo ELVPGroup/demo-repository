@@ -34,7 +34,7 @@ const OrderDetailPage = () => {
 
     // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
     if (order.status === '运输中' || order.status === '已发货') {
-      return order.shippingFrom?.location || order.shippingFrom?.location;
+      return order.currentLocation;
     }
 
     // 默认使用发货地址
