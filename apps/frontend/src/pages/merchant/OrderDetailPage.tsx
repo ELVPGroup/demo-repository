@@ -597,6 +597,10 @@ const OrderDetailPage = () => {
                     <span className="font-medium text-gray-900">{order.userName || '-'}</span>
                   </div>
                   <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">用户ID</span>
+                    <span className="font-medium text-gray-900">{order.userId || '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">商品数量</span>
                     <span className="font-medium text-gray-900">{order.amount || 0}</span>
                   </div>
@@ -613,17 +617,31 @@ const OrderDetailPage = () => {
                   {/* 发货地址 */}
                   {order.shippingFrom && (
                     <div>
-                      <div className="mb-2 text-sm font-medium text-gray-700">发货地址</div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-gray-900">
-                          {order.shippingFrom.address || '-'}
-                        </div>
-                        {order.shippingFrom.location && (
-                          <div className="text-xs text-gray-500">
-                            坐标: [{order.shippingFrom.location[0]?.toFixed(6)},{' '}
-                            {order.shippingFrom.location[1]?.toFixed(6)}]
+                      <div className="mb-3 text-sm font-medium text-gray-700">发货地址</div>
+                      <div className="space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-4">
+                        {order.shippingFrom.name && (
+                          <div>
+                            <div className="text-xs text-gray-500">联系人</div>
+                            <div className="mt-1 text-sm font-medium text-gray-900">
+                              {order.shippingFrom.name}
+                            </div>
                           </div>
                         )}
+                        {order.shippingFrom.phone && (
+                          <div>
+                            <div className="text-xs text-gray-500">联系电话</div>
+                            <div className="mt-1 text-sm font-medium text-gray-900">
+                              {order.shippingFrom.phone}
+                            </div>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-xs text-gray-500">详细地址</div>
+                          <div className="mt-1 text-sm font-medium text-gray-900">
+                            {order.shippingFrom.address || '-'}
+                          </div>
+                        </div>
+                    
                       </div>
                     </div>
                   )}
@@ -631,17 +649,27 @@ const OrderDetailPage = () => {
                   {/* 收货地址 */}
                   {order.shippingTo && (
                     <div>
-                      <div className="mb-2 text-sm font-medium text-gray-700">收货地址</div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-gray-900">
-                          {order.shippingTo.address || '-'}
-                        </div>
-                        {order.shippingTo.location && (
-                          <div className="text-xs text-gray-500">
-                            坐标: [{order.shippingTo.location[0]?.toFixed(6)},{' '}
-                            {order.shippingTo.location[1]?.toFixed(6)}]
+                      <div className="mb-3 text-sm font-medium text-gray-700">收货地址</div>
+                      <div className="space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-4">
+                        <div>
+                          <div className="text-xs text-gray-500">收件人姓名</div>
+                          <div className="mt-1 text-sm font-medium text-gray-900">
+                            {order.shippingTo.name || '-'}
                           </div>
-                        )}
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500">联系电话</div>
+                          <div className="mt-1 text-sm font-medium text-gray-900">
+                            {order.shippingTo.phone || '-'}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-gray-500">详细地址</div>
+                          <div className="mt-1 text-sm font-medium text-gray-900">
+                            {order.shippingTo.address || '-'}
+                          </div>
+                        </div>
+    
                       </div>
                     </div>
                   )}
@@ -669,15 +697,7 @@ const OrderDetailPage = () => {
                             {order.shippingTo.address || '-'}
                           </div>
                         </div>
-                        {order.shippingTo.location && (
-                          <div>
-                            <div className="text-sm text-gray-500">位置坐标</div>
-                            <div className="mt-1 font-medium text-gray-900">
-                              [{order.shippingTo.location[0]?.toFixed(6)},{' '}
-                              {order.shippingTo.location[1]?.toFixed(6)}]
-                            </div>
-                          </div>
-                        )}
+                      
                       </div>
                     </div>
                   )}
