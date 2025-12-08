@@ -16,6 +16,7 @@ const RecipientInfo: React.FC<RecipientInfoProps> = ({ addressInfo }) => {
   if (isEmpty) {
     return (
       <Card
+        variant="borderless"
         title={
           <Title level={4} style={{ margin: 0 }}>
             收货人信息
@@ -37,6 +38,7 @@ const RecipientInfo: React.FC<RecipientInfoProps> = ({ addressInfo }) => {
 
   return (
     <Card
+      variant="borderless"
       title={
         <Title level={4} style={{ margin: 0 }}>
           收货人信息

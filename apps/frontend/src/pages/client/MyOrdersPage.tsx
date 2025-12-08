@@ -16,6 +16,8 @@ import type { ColumnsType } from 'antd/es/table';
 import type { SortOrder } from 'antd/es/table/interface';
 import type { TableProps } from 'antd';
 import { useUserStore } from '@/store/userStore';
+import { TopBar } from '@/components/merchantComponents/TopBar';
+import ClientTopBar from '@/components/clientComponents/ClientTopBar';
 
 const MyOrdersPage: React.FC = () => {
   const navigate = useNavigate();
@@ -33,19 +35,6 @@ const MyOrdersPage: React.FC = () => {
 
   // Store
   const { orders, total, loading, setParams, fetchOrders } = useOrderStore();
-
-  // 处理退出登录
-  const handleLogout = () => {
-    // 清除本地存储的认证信息
-    sessionStorage.clear();
-    useUserStore.getState().logout();
-
-    // 显示成功消息
-    message.success('已成功退出登录');
-
-    // 跳转到首页
-    navigate('/');
-  };
 
   // 状态映射
   const getStatusConfig = (status: OrderStatus) => {
@@ -198,21 +187,10 @@ const MyOrdersPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 pt-20">
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         {/* 头部区域 */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">我的订单</h1>
-            <p className="text-gray-500">查看您的所有订单</p>
-          </div>
-          <Button
-            danger
-            icon={<LogOut size={16} />}
-            onClick={handleLogout}
-            className="flex items-center gap-2"
-          >
-            退出登录
-          </Button>
+        <div className="mx-auto">
+          <ClientTopBar title="我的订单" subTitle="查看您的所有订单" />
         </div>
 
         {/* 控制栏 */}

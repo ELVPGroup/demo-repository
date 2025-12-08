@@ -1,6 +1,7 @@
 import React from 'react';
-import { Card, Typography, Empty } from 'antd';
+import { Card, Typography, Empty, Image } from 'antd';
 import type { OrderProduct } from '@/types/orderDetailInterface';
+import { BASE_SERVER_URL } from '@/config';
 
 const { Title, Text } = Typography;
 
@@ -16,6 +17,7 @@ interface ProductListProps {
 const ProductList: React.FC<ProductListProps> = ({ products = [] }) => {
   return (
     <Card
+      variant="borderless"
       title={
         <Title level={4} style={{ margin: 0 }}>
           商品清单
@@ -42,21 +44,19 @@ const ProductList: React.FC<ProductListProps> = ({ products = [] }) => {
               }}
             >
               {/* 商品图片占位 */}
-              <div
-                style={{
-                  width: '60px',
-                  height: '60px',
-                  backgroundColor: '#f5f5f5',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: '16px',
-                  borderRadius: '4px',
-                  color: '#999',
-                }}
-              >
-                Img
-              </div>
+              {Object.prototype.hasOwnProperty.call(product, 'imageUrl') ? (
+                <Image
+                  src={`${BASE_SERVER_URL}${product.imageUrl!}`}
+                  width={56}
+                  height={56}
+                  style={{ objectFit: 'cover', borderRadius: 8 }}
+                  preview={false}
+                />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-md bg-gray-100 font-semibold">
+                  {product.name.slice(0, 1)}
+                </div>
+              )}
 
               {/* 商品信息 */}
               <div style={{ flex: 1 }}>

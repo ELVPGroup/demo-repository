@@ -32,13 +32,14 @@ const ShippingTimeline: React.FC<ShippingTimelineProps> = ({ timeline = [] }) =>
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}/${month}/${day} ${timeStr}`;
       }
-    } catch (e) {
+    } catch {
       return dateStr;
     }
   };
 
   return (
     <Card
+      variant="borderless"
       title={
         <Title level={4} style={{ margin: 0 }}>
           物流进度
@@ -55,7 +56,7 @@ const ShippingTimeline: React.FC<ShippingTimelineProps> = ({ timeline = [] }) =>
       ) : (
         <Timeline
           items={timeline.map((item, index) => ({
-            color: index === 0 ? 'green' : 'gray',
+            color: index === 0 ? 'blue' : 'gray',
             children: (
               <>
                 <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{item.shippingStatus}</div>
