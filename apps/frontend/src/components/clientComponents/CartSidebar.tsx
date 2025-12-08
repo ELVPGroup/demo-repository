@@ -152,7 +152,7 @@ function CartSidebar({ open, onClose }: CartSidebarProps) {
   const { products, totalPrice, totalQuantity, isEmpty, clearCart, removeProductsByMerchantIds } =
     useCartStore();
 
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [address, setAddress] = useState<AddressInfo | null>(null);
 
   const setDefaultAddress = (address: AddressInfo) => {
@@ -196,8 +196,6 @@ function CartSidebar({ open, onClose }: CartSidebarProps) {
       {} as Record<string, MerchantGroup>
     )
   );
-
-  console.log(merchantGroups);
 
   const handleCheckout = async () => {
     if (isEmpty) {
