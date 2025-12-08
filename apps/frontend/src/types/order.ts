@@ -1,12 +1,10 @@
 export interface OrderQueryParams {
-  status?: string;
-  customerName?: string;
-  orderId?: string;
-  productName?: string;
-  limit?: number;
-  offset?: number;
   sort?: 'asc' | 'desc';
   sortBy?: string;
+  limit?: number;
+  offset?: number;
+  status?: string;
+  customerName?: string;
 }
 
 export type OrderStatus = '待发货' | '运输中' | '已完成';
