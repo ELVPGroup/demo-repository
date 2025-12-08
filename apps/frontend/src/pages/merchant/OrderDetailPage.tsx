@@ -4,11 +4,12 @@ import Sidebar from '@/components/merchantComponents/Sidebar';
 import { ArrowLeft, Package, MapPin, Truck, Hash } from 'lucide-react';
 import { TimeLine } from '@/components/merchantComponents/TimeLine';
 import { MOCK_PACKAGE_DATA } from '@/constants';
-import { Alert, Button, Form, Modal, Input, InputNumber, Space, Card, message } from 'antd';
+import { Button, Form, Modal, Input, InputNumber, Space, Card, message, Select } from 'antd';
 import { useEffect, useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
+import { useShippingStore } from '@/store/useShippingStore';//import shipping store
+import { useOrderDetailStore } from '@/store/useOrderDetailStore';//import order detail store
 
-import { useOrderDetailStore } from '@/store/useOrderDetailStore';
 import RouteMap from '@/components/RouteMap'; // 导入RouteMap组件
 import { orderStatusColors } from '@/theme/theme';
 import type { ShipOrderParams } from '@/store/useOrderDetailStore';
@@ -21,9 +22,10 @@ const OrderDetailPage = () => {
   const [form] = Form.useForm();
   const [shipForm] = Form.useForm();
 
-  const { order, loading, error, fetchOrderDetail, updateOrder, shipOrder } = useOrderDetailStore();
+  const { order, loading, fetchOrderDetail, updateOrder, shipOrder } = useOrderDetailStore();
+  const { logisticsProviderList, getLogisticsProviderList } = useShippingStore();
 
-  const buttonStyle = orderStatusColors[order?.status as keyof typeof orderStatusColors]|| orderStatusColors.default;
+  const buttonStyle = orderStatusColors[order?.status as keyof typeof orderStatusColors] || orderStatusColors.default;
 
   useEffect(() => {
     if (orderId) {
@@ -47,6 +49,41 @@ const OrderDetailPage = () => {
       });
     }
   }, [editVisible, order, form]);
+
+  // 当发货弹窗打开且供应商列表加载完成时，自动选中第一个供应商
+  useEffect(() => {
+    if (shipModalVisible && logisticsProviderList.length > 0) {
+      // 确保在下一个事件循环中设置值，让 Modal 和 Form 完全渲染
+      const timer = setTimeout(() => {
+        const currentValue = shipForm.getFieldValue('logisticsId');
+        const firstProvider = logisticsProviderList[0];
+        const firstId = String(firstProvider.logisticsId); // 使用 logisticsId 而不是 id
+        
+        console.log('=== Select Value Debug ===');
+        console.log('Current form value:', currentValue, 'type:', typeof currentValue);
+        console.log('First provider:', firstProvider.name, 'logisticsId:', firstId, 'original id type:', typeof firstProvider.logisticsId);
+        console.log('All providers:', logisticsProviderList.map(p => ({ name: p.name, logisticsId: String(p.logisticsId) })));
+        
+        // 如果当前没有值，则设置为第一个供应商
+        if (!currentValue) {
+          console.log('Setting form value to:', firstId);
+          shipForm.setFieldsValue({ logisticsId: firstId });
+          
+          // 验证设置是否成功
+          setTimeout(() => {
+            const newValue = shipForm.getFieldValue('logisticsId');
+            console.log('After setFieldsValue, form value is:', newValue, 'type:', typeof newValue);
+          }, 50);
+        } else {
+          console.log('Form already has value:', currentValue);
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    } else if (shipModalVisible && logisticsProviderList.length === 0) {
+      // 如果弹窗打开但没有供应商，清空表单
+      shipForm.setFieldsValue({ logisticsId: undefined });
+    }
+  }, [shipModalVisible, logisticsProviderList, shipForm]);
 
   // 根据订单状态和发货状态确定当前位置
   const getCurrentLocation = () => {
@@ -95,10 +132,32 @@ const OrderDetailPage = () => {
   };
 
   // 打开发货弹窗
-  const handleOpenShipModal = () => {
+  const handleOpenShipModal = async () => {
     setShipModalVisible(true);
     shipForm.resetFields();
+  
+    try {
+      await getLogisticsProviderList(); // 加载供应商列表
+      
+      // 获取最新的供应商列表
+      const list = useShippingStore.getState().logisticsProviderList;
+      console.log('供应商列表:', list);
+  
+      if (list.length === 0) {
+        message.warning("暂无物流供应商，请添加后再发货");
+      }
+      // 注意：初始值设置已移至 useEffect，这里不需要手动设置
+  
+    } catch (err: unknown) {
+      const errorMessage = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : err instanceof Error
+          ? err.message
+          : '获取供应商失败';
+      message.error(errorMessage);
+    }
   };
+  
 
   // 关闭发货弹窗
   const handleCloseShipModal = () => {
@@ -109,14 +168,21 @@ const OrderDetailPage = () => {
   // 提交发货
   const handleShipOrder = async () => {
     if (!orderId) return;
-    
+
     try {
+      // 验证表单并获取值
       const values = await shipForm.validateFields();
+      
+      if (!values.logisticsId) {
+        message.error("请选择物流供应商");
+        return;
+      }
+
       const params: ShipOrderParams = {
         orderId: orderId,
         logisticsId: values.logisticsId,
       };
-      
+
       await shipOrder(params);
       message.success('订单发货成功');
       handleCloseShipModal();
@@ -138,6 +204,7 @@ const OrderDetailPage = () => {
   // 判断是否可以发货（待处理或已确认状态）
   const canShip = order && order.shippingStatus === '待发货';
 
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar />
@@ -155,20 +222,34 @@ const OrderDetailPage = () => {
       >
         <Form form={shipForm} layout="vertical" style={{ marginTop: 20 }}>
           <Form.Item
-            label="物流ID"
+            label="物流供应商"
             name="logisticsId"
-            rules={[
-              { required: true, message: '请输入物流ID' },
-              { min: 1, message: '物流ID不能为空' },
-            ]}
+            rules={[{ required: true, message: '请选择物流供应商' }]}
           >
-            <Input placeholder="请输入物流ID" />
+            <Select
+              placeholder="请选择物流供应商"
+              style={{ width: "100%" }}
+              loading={loading}
+              showSearch={false}
+              allowClear={false}
+              notFoundContent={loading ? '加载中...' : '暂无物流供应商'}
+              options={logisticsProviderList?.map(p => {
+                const id = String(p.logisticsId); // 使用 logisticsId 而不是 id
+                console.log('Mapping provider:', p.name, 'logisticsId:', id, 'original id type:', typeof p.logisticsId);
+                return {
+                  label: p.name,
+                  value: id,
+                };
+              }) || []}
+            />
           </Form.Item>
-          <div style={{ marginTop: 16, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
-            <div style={{ fontSize: 12, color: '#666' }}>
-              提示：请输入物流单号，发货后将自动更新订单状态
+          {logisticsProviderList.length === 0 && !loading && (
+            <div style={{ marginTop: 16, padding: 12, backgroundColor: '#fff7e6', borderRadius: 4, border: '1px solid #ffd591' }}>
+              <div style={{ fontSize: 12, color: '#d46b08' }}>
+                提示：暂无物流供应商，请先添加物流供应商
+              </div>
             </div>
-          </div>
+          )}
         </Form>
       </Modal>
 
@@ -501,12 +582,12 @@ const OrderDetailPage = () => {
                     <span className="text-sm text-gray-500">订单状态</span>
                     <span
                       className="rounded-full px-3 py-1 text-xs font-semibold"
-                      style = {{
-                          backgroundColor: buttonStyle.bg,
-                          color: buttonStyle.text,
-                          border: buttonStyle.border,
+                      style={{
+                        backgroundColor: buttonStyle.bg,
+                        color: buttonStyle.text,
+                        border: buttonStyle.border,
                       }}
-                      
+
                     >
                       {order.shippingStatus || '未知'}
                     </span>
@@ -573,27 +654,27 @@ const OrderDetailPage = () => {
                         <div>
                           <div className="text-sm text-gray-500">姓名</div>
                           <div className="mt-1 font-medium text-gray-900">
-                            {order.addressInfo.name || '-'}
+                            {order.shippingTo.name || '-'}
                           </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">联系电话</div>
                           <div className="mt-1 font-medium text-gray-900">
-                            {order.addressInfo.phone || '-'}
+                            {order.shippingTo.phone || '-'}
                           </div>
                         </div>
                         <div>
                           <div className="text-sm text-gray-500">地址</div>
                           <div className="mt-1 font-medium text-gray-900">
-                            {order.addressInfo.address || '-'}
+                            {order.shippingTo.address || '-'}
                           </div>
                         </div>
-                        {order.addressInfo.location && (
+                        {order.shippingTo.location && (
                           <div>
                             <div className="text-sm text-gray-500">位置坐标</div>
                             <div className="mt-1 font-medium text-gray-900">
-                              [{order.addressInfo.location[0]?.toFixed(6)},{' '}
-                              {order.addressInfo.location[1]?.toFixed(6)}]
+                              [{order.shippingTo.location[0]?.toFixed(6)},{' '}
+                              {order.shippingTo.location[1]?.toFixed(6)}]
                             </div>
                           </div>
                         )}

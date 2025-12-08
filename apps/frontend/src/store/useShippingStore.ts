@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { AddressInfo, CreateAddressRequest, UpdateAddressRequest } from '../types/orderDetailInterface';
-import { commonAxiosInstance } from '../utils/axios';
+import type { LogisticsProvider } from '../types/index';
+import { commonAxiosInstance, merchantAxiosInstance } from '../utils/axios';
 
 
 interface ShippingStore {
@@ -8,6 +9,7 @@ interface ShippingStore {
     defaultAddress: AddressInfo | null;
     loading: boolean;
     error: string | null;
+    logisticsProviderList: LogisticsProvider[];
 
     // actions
     fetchShippingList: () => Promise<void>;
@@ -16,6 +18,9 @@ interface ShippingStore {
     addShipping: (shipping: CreateAddressRequest) => Promise<AddressInfo>;
     updateShipping: (shipping: UpdateAddressRequest) => Promise<AddressInfo>;
     deleteShipping: (shippingId: string) => Promise<void>;
+
+    //get logistics provider list
+    getLogisticsProviderList: () => Promise<void>;
 }
 
 export const useShippingStore = create<ShippingStore>((set) => ({
@@ -23,14 +28,15 @@ export const useShippingStore = create<ShippingStore>((set) => ({
     defaultAddress: null,
     loading: false,
     error: null,
+    logisticsProviderList: [],
 
     fetchShippingList: async () => {
         set({ loading: true });
         try {
             const response = await commonAxiosInstance.get('/shipping/list');
-        
+
             set({ shippingList: response.data.data });
-    
+
         } catch (error) {
             set({ error: error as string });
         } finally {
@@ -63,13 +69,13 @@ export const useShippingStore = create<ShippingStore>((set) => ({
         try {
             // 前端只发送 name, phone, address
             const response = await commonAxiosInstance.post<{ data: AddressInfo }>('/shipping/list', shipping);
-            
+
             // 后端返回完整数据：name, phone, address + id + location
             const newAddress = response.data.data;
-            
+
             // 更新 store，使用后端返回的完整数据
             set((state) => ({ shippingList: [...state.shippingList, newAddress] }));
-            
+
             return newAddress;
         } catch (error) {
             set({ error: error as string });
@@ -83,11 +89,11 @@ export const useShippingStore = create<ShippingStore>((set) => ({
         try {
             // 前端发送包含 addressInfoId, name, phone, address 的完整对象
             await commonAxiosInstance.put('/shipping/list', shipping);
-            
+
             // 后端不返回数据，使用前端发送的数据更新 store
             // 保留原有的 location（如果存在）
             let updatedAddress: AddressInfo | undefined;
-            
+
             set((state) => {
                 const updatedList: AddressInfo[] = state.shippingList.map((item: AddressInfo) => {
                     if (item.addressInfoId === shipping.addressInfoId) {
@@ -104,14 +110,14 @@ export const useShippingStore = create<ShippingStore>((set) => ({
                     }
                     return item;
                 });
-                
+
                 return { shippingList: updatedList };
             });
-            
+
             if (!updatedAddress) {
                 throw new Error('未找到要更新的地址');
             }
-            
+
             return updatedAddress;
         } catch (error) {
             set({ error: error as string });
@@ -131,5 +137,16 @@ export const useShippingStore = create<ShippingStore>((set) => ({
         } finally {
             set({ loading: false });
         }
-
-}}));
+    },
+    getLogisticsProviderList: async () => {
+        set({ loading: true });
+        try {
+            const response = await merchantAxiosInstance.get('/logistics-provider');
+            set({ logisticsProviderList: response.data.data });
+        } catch (error) {
+            set({ error: error as string });
+        } finally {
+            set({ loading: false });
+        }
+    }
+}));
