@@ -240,11 +240,13 @@ export class OrderService {
     if (!items || items.length === 0) {
       throw new Error('订单项不能为空');
     }
+    let totalPrice = 0;
     for (const item of items) {
       const product = await productModel.findById(item.productId);
       if (!product) {
         throw new Error(`商品不存在: ${item.productId}`);
       }
+      totalPrice += Number(product.price) * item.quantity;
     }
     // 使用事务保证数据正确建立
     const result = await prisma.$transaction(async (tx) => {
@@ -253,6 +255,7 @@ export class OrderService {
         data: {
           userId,
           merchantId,
+          totalPrice,
         },
       });
 

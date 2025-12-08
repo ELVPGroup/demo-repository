@@ -44,16 +44,16 @@ const ProductList: React.FC<ProductListProps> = ({ products = [] }) => {
               }}
             >
               {/* 商品图片占位 */}
-              {Object.prototype.hasOwnProperty.call(product, 'imageUrl') ? (
+              {product.imageUrl ? (
                 <Image
-                  src={`${BASE_SERVER_URL}${product.imageUrl!}`}
+                  src={`${BASE_SERVER_URL}${product.imageUrl}`}
                   width={56}
                   height={56}
-                  style={{ objectFit: 'cover', borderRadius: 8 }}
+                  style={{ objectFit: 'cover', borderRadius: 8, marginRight: 12 }}
                   preview={false}
                 />
               ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-md bg-gray-100 font-semibold">
+                <div className="mr-3 flex h-14 w-14 items-center justify-center rounded-md bg-gray-100 font-semibold">
                   {product.name.slice(0, 1)}
                 </div>
               )}

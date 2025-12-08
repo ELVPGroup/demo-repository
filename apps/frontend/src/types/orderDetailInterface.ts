@@ -5,6 +5,7 @@ export interface OrderProduct {
   description: string;
   price: number;
   amount: number;
+  imageUrl?: string;
 }
 
 // 地址信息（完整数据，包含后端返回的所有字段）
@@ -55,6 +56,11 @@ export interface OrderDetail {
   products: OrderProduct[];
   shippingStatus: ShippingStatus;
   timeline: OrderTimelineItem[];
+  // 额外信息（可选）
+  distance?: number;
+  estimatedTime?: string;
+  currentLocation?: [number, number];
+  isTimeRisk?: boolean;
 }
 
 // 接口返回格式

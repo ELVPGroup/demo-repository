@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Table, Input, Button, Empty, message, Tag } from 'antd';
+import { Card, Table, Input, Button, Empty, Tag, List } from 'antd';
 import {
   SearchOutlined,
   SortAscendingOutlined,
   SortDescendingOutlined,
   EyeOutlined,
   ReloadOutlined,
+  ClockCircleOutlined,
+  DollarOutlined,
+  ShoppingOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
-import { LogOut } from 'lucide-react';
 import { useOrderStore } from '@/store/useOrderStore';
 import type { OrderItem, OrderStatus } from '@/types/order';
 import { orderStatusColors } from '@/theme/theme';
 import type { ColumnsType } from 'antd/es/table';
 import type { SortOrder } from 'antd/es/table/interface';
-import type { TableProps } from 'antd';
-import { useUserStore } from '@/store/userStore';
-import { TopBar } from '@/components/merchantComponents/TopBar';
+import type { TableProps, PaginationProps } from 'antd';
 import ClientTopBar from '@/components/clientComponents/ClientTopBar';
 
 const MyOrdersPage: React.FC = () => {
@@ -31,7 +31,7 @@ const MyOrdersPage: React.FC = () => {
 
   // 分页相关状态
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   // Store
   const { orders, total, loading, setParams, fetchOrders } = useOrderStore();
@@ -111,6 +111,17 @@ const MyOrdersPage: React.FC = () => {
     }
   };
 
+  // 分页渲染
+  const itemRender: PaginationProps['itemRender'] = (_, type, originalElement) => {
+    if (type === 'prev') {
+      return <a>上一页</a>;
+    }
+    if (type === 'next') {
+      return <a>下一页</a>;
+    }
+    return originalElement;
+  };
+
   // 表格列定义
   const createdSortOrder: SortOrder | undefined =
     sortBy === 'createdAt' ? (sortOrder === 'asc' ? 'ascend' : 'descend') : undefined;
@@ -185,9 +196,61 @@ const MyOrdersPage: React.FC = () => {
     }
   };
 
+  // 移动端卡片渲染
+  const renderMobileItem = (item: OrderItem) => {
+    const config = getStatusConfig(item.status);
+    return (
+      <List.Item>
+        <Card className="w-full shadow-sm hover:shadow-md transition-shadow" styles={{ body: { padding: '16px' } }}>
+          <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2">
+            <span className="font-medium text-gray-900">订单号: {item.orderId}</span>
+            <Tag color={config.color} style={{ color: config.textColor, border: 'none', marginRight: 0 }}>
+              {config.text}
+            </Tag>
+          </div>
+          
+          <div className="space-y-2 text-sm text-gray-500">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ClockCircleOutlined />
+                <span>下单时间</span>
+              </div>
+              <span>{item.createdAt}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShoppingOutlined />
+                <span>商品数量</span>
+              </div>
+              <span>共 {item.amount} 件</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarOutlined />
+                <span>订单金额</span>
+              </div>
+              <span className="text-base font-medium text-red-500">¥{Number(item.totalPrice).toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-end pt-2">
+             <Button
+                type="primary"
+                ghost
+                size="small"
+                onClick={() => navigate(`/client/orders/${item.orderId}`)}
+              >
+                查看详情
+              </Button>
+          </div>
+        </Card>
+      </List.Item>
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6 pt-20">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="min-h-screen bg-gray-50 p-4 pt-20 sm:p-6 sm:pt-24">
+      <div className="mx-auto max-w-7xl space-y-4 sm:space-y-6">
         {/* 头部区域 */}
         <div className="mx-auto">
           <ClientTopBar title="我的订单" subTitle="查看您的所有订单" />
@@ -195,29 +258,32 @@ const MyOrdersPage: React.FC = () => {
 
         {/* 控制栏 */}
         <Card bordered={false} className="shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
               <Input
                 placeholder="搜索订单号..."
                 prefix={<SearchOutlined className="text-gray-400" />}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onPressEnter={handleSearch}
-                className="w-64"
+                className="w-full sm:w-64"
                 allowClear
               />
-              <Button type="primary" onClick={handleSearch}>
-                搜索
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={handleRefresh}>
-                重置
-              </Button>
+              <div className="flex gap-2">
+                <Button type="primary" onClick={handleSearch} className="flex-1 sm:flex-none">
+                  搜索
+                </Button>
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh} className="flex-1 sm:flex-none">
+                  重置
+                </Button>
+              </div>
             </div>
 
             {/* 排序按钮组 */}
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500">排序：</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-gray-500 text-sm">排序：</span>
               <Button
+                size="small"
                 onClick={() => handleManualSort('createdAt')}
                 type={sortBy === 'createdAt' ? 'primary' : 'default'}
                 icon={
@@ -233,6 +299,7 @@ const MyOrdersPage: React.FC = () => {
                 下单时间
               </Button>
               <Button
+                size="small"
                 onClick={() => handleManualSort('totalPrice')}
                 type={sortBy === 'totalPrice' ? 'primary' : 'default'}
                 icon={
@@ -251,8 +318,8 @@ const MyOrdersPage: React.FC = () => {
           </div>
         </Card>
 
-        {/* 订单列表 */}
-        <Card bordered={false} className="shadow-sm">
+        {/* 订单列表 - 桌面端 Table */}
+        <Card bordered={false} className="hidden shadow-sm md:block">
           <Table
             columns={columns}
             dataSource={orders}
@@ -264,6 +331,7 @@ const MyOrdersPage: React.FC = () => {
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total) => `共 ${total} 条订单`,
+              itemRender: itemRender,
             }}
             loading={loading}
             onChange={handleTableChange}
@@ -272,6 +340,30 @@ const MyOrdersPage: React.FC = () => {
             }}
           />
         </Card>
+
+        {/* 订单列表 - 移动端 List */}
+        <div className="md:hidden">
+          <List
+            dataSource={orders}
+            renderItem={renderMobileItem}
+            loading={loading}
+            locale={{
+              emptyText: <Empty description="暂无订单数据" />,
+            }}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: total,
+              onChange: (page, size) => {
+                setCurrentPage(page);
+                setPageSize(size);
+              },
+              showSizeChanger: false, // 移动端通常不显示每页条数切换
+              itemRender: itemRender,
+              align: 'center',
+            }}
+          />
+        </div>
       </div>
     </div>
   );

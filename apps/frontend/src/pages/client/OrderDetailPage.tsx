@@ -1,9 +1,8 @@
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Hash, Truck, MapPin, LogOut } from 'lucide-react';
-import { Alert, Button, message } from 'antd';
+import { ArrowLeft, Truck, MapPin } from 'lucide-react';
+import { Alert, Button } from 'antd';
 import { useEffect } from 'react';
 import { useOrderDetailStore } from '@/store/useOrderDetailStore';
-import React from 'react';
 import ProductList from '@/commonpart/ProductList';
 import RecipientInfo from '@/commonpart/RecipientInfo';
 import ShippingTimeline from '@/commonpart/ShippingTimeline';
@@ -24,17 +23,17 @@ const OrderDetailPage = () => {
   }, [orderId, fetchOrderDetail]);
 
   // 根据订单状态和发货状态确定当前位置
-  const getCurrentLocation = () => {
-    if (!order) return null;
+  const getCurrentLocation = (): [number, number] | undefined => {
+    if (!order) return undefined;
 
     // 如果订单已送达，使用收货地址作为当前位置
     if (order.status === '已签收' || order.status === 'delivered') {
-      return order.shippingTo?.location || order.shippingTo?.location;
+      return order.shippingTo?.location;
     }
 
     // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
     if (order.status === '运输中' || order.status === '已发货') {
-      return order.shippingFrom?.location || order.shippingFrom?.location;
+      return order.currentLocation || order.shippingFrom?.location;
     }
 
     // 默认使用发货地址
@@ -45,7 +44,10 @@ const OrderDetailPage = () => {
     <div className="flex min-h-screen flex-col items-center bg-gray-50">
       <main className="max-w-4xl px-10 py-6">
         <div className="flex flex-row justify-between gap-4">
-          <ClientTopBar title={`订单详情 - ${orderId || ''}`} />
+          <ClientTopBar
+            title={`订单详情 - ${orderId || ''}`}
+            titleClass="text-sm md:text-3xl"
+          />
 
           {/* 返回到客户端订单列表 */}
           <Button onClick={() => navigate('/client/orders')} color="primary">
@@ -121,6 +123,7 @@ const OrderDetailPage = () => {
                         name: order.shippingTo.address,
                         coords: order.shippingTo.location || [114.872389, 30.453667],
                       }}
+                      status={order.status}
                       currentLocation={getCurrentLocation()}
                       showControls={true}
                       showInfoCard={true}
