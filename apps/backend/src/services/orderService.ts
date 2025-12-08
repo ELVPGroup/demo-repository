@@ -28,6 +28,7 @@ import {
 import { logisticsService } from '@/services/logisticsService.js';
 import { amapClient } from '@evlp/shared/utils/amapClient.js';
 import dayjs from 'dayjs';
+import type { MapViewport } from '@/types/index.js';
 
 // 订单列表查询时需要包含的关联模型
 const orderModelFindInclude = {
@@ -127,7 +128,10 @@ export class OrderService {
    * 获取配送区域订单列表
    */
   async getDeliveryAreaOrderList(
-    payload: MerchantOrderListParams & Partial<MerchantOrderListFilterParams>
+    payload: MerchantOrderListParams &
+      Partial<MerchantOrderListFilterParams> & {
+        mapViewport?: MapViewport;
+      }
   ) {
     // 查找商家之前配置的配送区域
     const deliveryArea = await prisma.deliveryArea.findUnique({
@@ -143,29 +147,38 @@ export class OrderService {
       where['status'] = payload.status;
     }
 
+    if (payload.mapViewport) {
+      const [p1, p2] = payload.mapViewport;
+      // 无论p1、p2的顺序，都确保构建出矩形边界
+      // 经度范围构建
+      const minLng = Math.min(p1[0], p2[0]);
+      const maxLng = Math.max(p1[0], p2[0]);
+      // 纬度范围构建
+      const minLat = Math.min(p1[1], p2[1]);
+      const maxLat = Math.max(p1[1], p2[1]);
+
+      if (minLng === maxLng || minLat === maxLat) {
+        throw new Error('无效的地图视口：经度或纬度不能相同');
+      }
+
+      where['detail'] = {
+        is: {
+          addressTo: {
+            is: {
+              longitude: { gte: minLng, lte: maxLng },
+              latitude: { gte: minLat, lte: maxLat },
+            },
+          },
+        },
+      };
+    }
+
     let ordersRaw: AreaOrderListPayload[] = [];
 
     // 配送区域中心点与半径处理
     const centerLon = Number(deliveryArea.longitude);
     const centerLat = Number(deliveryArea.latitude);
     const radiusMeters = Number(deliveryArea.radius);
-
-    // // 根据半径计算纬度方向上的最大偏移量
-    // const latDelta = radiusMeters / METERS_PER_DEGREE_LAT;
-    // // 根据当前纬度计算经度方向上的最大偏移量（经度1°长度随纬度变化）
-    // const lonDelta = radiusMeters / metersPerDegreeLonAtLat(centerLat);
-
-    // // 先使用矩形边界做粗筛，减少后续精确计算量
-    // where['detail'] = {
-    //   is: {
-    //     addressTo: {
-    //       is: {
-    //         longitude: { gte: centerLon - lonDelta, lte: centerLon + lonDelta },
-    //         latitude: { gte: centerLat - latDelta, lte: centerLat + latDelta },
-    //       },
-    //     },
-    //   },
-    // };
 
     ordersRaw = (await orderModel.findMany({
       where,
@@ -174,13 +187,6 @@ export class OrderService {
       ...(payload.sort && payload.sortBy ? { orderBy: { [payload.sortBy]: payload.sort } } : {}),
       include: areaOrderModelFindInclude,
     })) as AreaOrderListPayload[];
-
-    // ordersRaw = ordersRaw.filter((o) => {
-    //   const to = o.detail?.addressTo;
-    //   if (!to) return false;
-    //   const d = haversineDistanceMeters([centerLon, centerLat], [to.longitude, to.latitude]);
-    //   return d <= radiusMeters;
-    // });
 
     return ordersRaw.map((order) => {
       const to = order.detail?.addressTo;
