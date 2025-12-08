@@ -15,6 +15,7 @@ const Sidebar: React.FC = () => {
 
   const handleLogout = () => {
     // 清除本地存储的认证信息
+    localStorage.clear();
     sessionStorage.clear();
     useUserStore.getState().logout();
 

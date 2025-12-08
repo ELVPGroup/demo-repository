@@ -19,12 +19,13 @@ export interface Order {
 }
 
 export interface LogisticsProvider {
-  id: string;
+  logisticsId: string; // 后端返回的字段名
   name: string;
-  type: 'EV' | 'Truck' | 'Drone';
   speed: number; // km/h
-  maxRange: number; // km
-  color: string;
+  // 以下字段为可选，因为后端可能不返回
+  type?: 'EV' | 'Truck' | 'Drone';
+  maxRange?: number; // km
+  color?: string;
 }
 
 export interface DashboardStats {
