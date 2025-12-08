@@ -1,6 +1,6 @@
 import { BASE_SERVER_URL } from '@/config';
 import { MinusOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
+import { Button, Tooltip } from 'antd';
 import { ImageOff, Store } from 'lucide-react';
 import type { ClientProduct } from '@/types/product';
 import { useCartStore } from '@/store/useCartStore';
@@ -53,23 +53,35 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="flex items-center gap-2">
             {currentQty > 0 ? (
               <>
-                <Button
-                  type="default"
-                  icon={<MinusOutlined />}
-                  onClick={() => handleQtyChange(product, currentQty - 1)}
-                  size="small"
-                  disabled={currentQty <= 0}
-                />
+                <Tooltip title="减少数量">
+                  <Button
+                    type="default"
+                    icon={<MinusOutlined />}
+                    onClick={() => handleQtyChange(product, currentQty - 1)}
+                    size="small"
+                    disabled={currentQty <= 0}
+                  />
+                </Tooltip>
                 <p className="text-md text-balance">{currentQty}</p>
               </>
             ) : null}
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => addProduct(product)}
-              size="small"
-              disabled={currentQty >= product.amount || product.amount <= 0}
-            />
+            <Tooltip
+              title={
+                currentQty >= product.amount
+                  ? '库存不足'
+                  : currentQty > 0
+                    ? '增加数量'
+                    : '添加到购物车'
+              }
+            >
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => addProduct(product)}
+                size="small"
+                disabled={currentQty >= product.amount || product.amount <= 0}
+              />
+            </Tooltip>
           </div>
         </div>
       </div>

@@ -42,7 +42,7 @@ createRoot(document.getElementById('root')!).render(
             <Route index element={<App />} />
 
             {/* WebSocket 演示路由，用于开发演示 */}
-            <Route path="/demo/ws" element={<DemoWebSocketPage />} />
+            <Route path="/demo/ws/:orderId" element={<DemoWebSocketPage />} />
 
             {/* 商家端路由 */}
             <Route path="/merchant" element={<MerchantLayout />}>

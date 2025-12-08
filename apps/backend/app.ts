@@ -8,8 +8,8 @@ import { routers } from './src/routes/index.js';
 import {
   errorHandleMiddleware,
   notFoundMiddleware,
-} from './src/middleware/errorHandleMiddleware.js';
-import { baseResponseMiddleware } from './src/middleware/baseResponseMiddleware.js';
+} from '@evlp/shared/middleware/errorHandleMiddleware.js';
+import { baseResponseMiddleware } from '@evlp/shared/middleware/baseResponseMiddleware.js';
 import { getStaticRoot } from '@/utils/config.js';
 import dayjs from 'dayjs';
 
@@ -23,7 +23,7 @@ app.use(bodyParser());
 // 日志中间件
 app.use(
   koaLogger((str) => {
-    process.stdout.write(`${dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss')}${str}`);
+    process.stdout.write(`[BASE Server]${dayjs(new Date()).format('YYYY-MM-DD HH:mm:ss')}${str}\n`);
   })
 );
 

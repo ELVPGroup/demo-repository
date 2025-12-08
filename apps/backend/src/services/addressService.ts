@@ -1,5 +1,5 @@
 import { addressModel } from '@/models/addressModel.js';
-import { amapClient } from '@/amapClient.js';
+import { amapClient } from '@evlp/shared/utils/amapClient.js';
 import type { Prisma } from 'generated/prisma/client.js';
 import prisma from '@/db.js';
 
