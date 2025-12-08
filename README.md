@@ -6,9 +6,12 @@
 
 ```
 ├── apps/
-│   ├── backend/        # Koa + Prisma + PostgreSQL + WebSocket
-│   └── frontend/       # React + TypeScript + Vite
-├── docs/               # 开发与数据库文档
+│   ├── backend/            # Koa + Prisma + PostgreSQL + WebSocket
+│   ├── frontend/           # React + TypeScript + Vite
+│   └── simulation-service/ # Koa + TypeScript (物流轨迹模拟服务)
+├── packages/
+│   └── shared/             # 公共类型定义、工具函数与中间件
+├── docs/                   # 开发与数据库文档
 ├── package.json        # 根级脚本与工具配置
 ├── pnpm-workspace.yaml # Workspace 配置
 └── README.md
@@ -16,6 +19,7 @@
 
 前端技术栈：React 19、TypeScript、Vite、Ant Design、Tailwind
 后端技术栈：Koa、Prisma、PostgreSQL、JWT、WebSocket
+模拟轨迹服务技术栈：Koa、TypeScript
 
 ## 环境要求
 
@@ -47,9 +51,14 @@ pnpm install
    如在部署环境使用既有迁移，可改用：
    ```bash
    pnpm --filter @elvp/backend prisma migrate deploy
-   ```
+  ```
+
+4. 在 `apps/simulation-service` 目录下配置环境文件：
+   - 复制 `apps/simulation-service/.env.example` 为 `.env`
+   - 配置 `PORT` (默认 9001)、`AMAP_API_KEY` 和 `BACKEND_URL`
 
 后端默认监听端口 `3000`（可在 `.env` 中通过 `PORT` 配置）。健康检查接口：`GET /health`。
+模拟轨迹服务默认监听端口 `9001`（可在 `.env` 中通过 `PORT` 配置）。健康检查接口：`GET /health`。
 
 ## 启动开发环境
 
@@ -64,6 +73,11 @@ pnpm install
   pnpm dev:web
   ```
   默认访问 `http://localhost:5173`。
+
+- 启动模拟轨迹服务：
+  ```bash
+  pnpm --filter @elvp/simulation-service dev
+  ```
 
 ## 前端 API/WS 地址说明
 
@@ -83,6 +97,11 @@ pnpm install
 - 商家订单：`POST /api/merchant/orders/list`、`GET /api/merchant/orders/detail/:orderId`
 
 ## 构建与预览
+
+- 构建全部服务：
+  ```bash
+  pnpm build:all
+  ```
 
 - 构建后端并运行：
   ```bash

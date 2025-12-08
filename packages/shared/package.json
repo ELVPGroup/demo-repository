@@ -3,8 +3,17 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
+  "exports": {
+    "./*": "./dist/*"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/koa": "^3.0.1",
+    "tsc-alias": "^1.8.16"
   },
   "keywords": [],
   "author": "",

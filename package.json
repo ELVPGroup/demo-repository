@@ -8,6 +8,8 @@
     "dev:server": "pnpm --filter @elvp/backend dev",
     "build:web": "pnpm --filter @elvp/frontend build",
     "build:server": "pnpm --filter @elvp/backend build",
+    "build:shared": "pnpm --filter @elvp/shared build",
+    "build:all": "pnpm -r build",
     "preview:web": "pnpm --filter @elvp/frontend preview",
     "serve": "pnpm --filter @elvp/backend serve",
     "lint": "eslint .",
