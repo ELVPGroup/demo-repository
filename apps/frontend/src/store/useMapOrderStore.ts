@@ -22,13 +22,13 @@ interface MapBoundsParams {
 interface MapOrderStore {
   // 地图边界参数
   boundsParams: MapBoundsParams;
-  
+
   // 当前显示区域内的订单
   mapOrders: OrderItem[];
-  
+
   // 订单总数（可能用于分页）
   total: number;
-  
+
   // 加载状态
   loading: boolean;
 
@@ -46,14 +46,14 @@ export const useMapOrderStore = create<MapOrderStore>((set, get) => ({
   boundsParams: {
     northEast: {
       lat: 0,
-      lng: 0
+      lng: 0,
     },
     southWest: {
       lat: 0,
-      lng: 0
+      lng: 0,
     },
     limit: 50, // 地图显示通常需要更多数据
-    offset: 0
+    offset: 0,
   },
 
   mapOrders: [],
@@ -73,8 +73,8 @@ export const useMapOrderStore = create<MapOrderStore>((set, get) => ({
         northEast: { lat: 0, lng: 0 },
         southWest: { lat: 0, lng: 0 },
         limit: 50,
-        offset: 0
-      }
+        offset: 0,
+      },
     }),
 
   // 根据地图边界获取订单
@@ -83,10 +83,10 @@ export const useMapOrderStore = create<MapOrderStore>((set, get) => ({
       set({ loading: true });
       try {
         const { boundsParams } = get();
-        
+
         // 验证坐标参数
         if (
-          !boundsParams.northEast || 
+          !boundsParams.northEast ||
           !boundsParams.southWest ||
           boundsParams.northEast.lat === boundsParams.southWest.lat ||
           boundsParams.northEast.lng === boundsParams.southWest.lng
@@ -101,22 +101,27 @@ export const useMapOrderStore = create<MapOrderStore>((set, get) => ({
 
         // 构建请求体
         const requestBody = {
-          northEastLat: boundsParams.northEast.lat,
-          northEastLng: boundsParams.northEast.lng,
-          southWestLat: boundsParams.southWest.lat,
-          southWestLng: boundsParams.southWest.lng,
+          mapViewport: [
+            // 地图矩形对角线点1 [经度, 纬度] 坐标
+            [boundsParams.northEast.lng, boundsParams.northEast.lat],
+            // 地图矩形对角线点2 [经度, 纬度] 坐标
+            [boundsParams.southWest.lng, boundsParams.southWest.lat],
+          ],
           limit: boundsParams.limit,
-          offset: boundsParams.offset
+          offset: boundsParams.offset,
         };
 
         // 调用地图订单查询接口
-        const res = await axiosInstance.post<OrderListResponse>('/orders/delivery-area', requestBody);
+        const res = await axiosInstance.post<OrderListResponse>(
+          '/orders/delivery-area',
+          requestBody
+        );
 
         const orders = res.data.data || [];
-        
+
         set({
           mapOrders: orders,
-          total: res.data.total || orders.length,
+          total: orders.length,
         });
 
         console.log('地图区域订单查询结果:', orders.length, '条订单');
@@ -147,4 +152,3 @@ export const isPointInBounds = (
     point.lng >= bounds.southWest.lng
   );
 };
-

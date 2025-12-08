@@ -8,7 +8,11 @@ class ClientProductController {
    */
   async list(ctx: Context): Promise<void> {
     try {
-      const { limit, offset } = ctx.request.body as { limit?: number; offset?: number };
+      const { limit, offset, productName } = ctx.request.body as {
+        limit?: number;
+        offset?: number;
+        productName?: string;
+      };
       const numericLimit = limit !== undefined ? Number(limit) : undefined;
       const numericOffset = offset !== undefined ? Number(offset) : undefined;
       if (numericLimit !== undefined && (!Number.isInteger(numericLimit) || numericLimit < 0)) {
@@ -25,6 +29,7 @@ class ClientProductController {
       const data = await productService.listClient({
         limit: numericLimit!,
         offset: numericOffset!,
+        ...(productName ? { productName } : {}),
       });
       ctx.status = 200;
       ctx.body = { _data: data, _message: '获取商品列表成功' };

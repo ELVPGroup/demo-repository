@@ -1,17 +1,39 @@
 import { useUserStore } from '@/store/userStore';
 import { Avatar, Badge, Button, Dropdown, type MenuProps } from 'antd';
 import { LogIn, Search, ShoppingCart, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useCartStore } from '@/store/useCartStore';
 import CartSidebar from './CartSidebar';
 import AddressManagerDialog from './AddressManagerDialog';
+import { useSearchStore } from '@/store/useSearchStore';
+import { debounced } from '@/utils/general';
+import { useLocation } from 'react-router';
 
 function ClientNavbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { isLoggedIn, user } = useUserStore();
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { searchQuery, setSearchQuery, clearSearch } = useSearchStore();
+  const [localQuery, setLocalQuery] = useState(searchQuery);
+  const location = useLocation();
+
+  useEffect(() => {
+    setLocalQuery(searchQuery);
+  }, [searchQuery]);
+
+  // 防抖更新搜索查询
+  const debouncedSetSearchQuery = useMemo(
+    () => debounced((...args: unknown[]) => setSearchQuery(args[0] as string), 300),
+    [setSearchQuery]
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedSetSearchQuery.cancel();
+    };
+  }, [debouncedSetSearchQuery]);
+
   const [cartOpen, setCartOpen] = useState(false);
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
 
@@ -79,27 +101,33 @@ function ClientNavbar() {
           </Link>
 
           {/* 搜索框 */}
-          <div className="mx-8 hidden max-w-xs flex-1 md:flex">
-            <div className="relative w-full">
-              <input
-                type="text"
-                placeholder="搜索商品..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-secondary text-foreground placeholder-muted-foreground focus:ring-primary w-full rounded-lg bg-white px-4 py-2 pr-20 text-sm focus:ring-2 focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="text-muted-foreground hover:text-foreground absolute top-2.5 right-9 h-4 w-4 transition-colors"
-                  aria-label="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
-              <Search className="text-muted-foreground absolute top-2.5 right-3 h-4 w-4" />
+          {location.pathname === '/client' && (
+            <div className="mx-8 hidden max-w-xs flex-1 md:flex">
+              <div className="relative w-full">
+                <input
+                  type="text"
+                  placeholder="搜索商品..."
+                  value={localQuery}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setLocalQuery(val);
+                    debouncedSetSearchQuery(val);
+                  }}
+                  className="bg-secondary text-foreground placeholder-muted-foreground focus:ring-primary w-full rounded-lg bg-white px-4 py-2 pr-20 text-sm focus:ring-2 focus:outline-none"
+                />
+                {localQuery && (
+                  <button
+                    onClick={() => clearSearch()}
+                    className="text-muted-foreground hover:text-foreground absolute top-2.5 right-9 h-4 w-4 cursor-pointer transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                <Search className="text-muted-foreground absolute top-2.5 right-3 h-4 w-4" />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex items-center gap-4">
             {isLoggedIn ? (

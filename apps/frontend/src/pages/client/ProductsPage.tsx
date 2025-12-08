@@ -6,6 +6,7 @@ import { clientAxiosInstance } from '@/utils/axios';
 import type { ClientProduct } from '@/types/product';
 import ClientTopBar from '@/components/clientComponents/ClientTopBar';
 import { useCartStore } from '@/store/useCartStore';
+import { useSearchStore } from '@/store/useSearchStore';
 
 function ProductsPage() {
   const [products, setProducts] = useState<ClientProduct[]>([]);
@@ -13,6 +14,7 @@ function ProductsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const { syncCartWithProducts } = useCartStore();
+  const { searchQuery } = useSearchStore();
 
   const totalItems = useMemo(() => products.length, [products]);
 
@@ -20,7 +22,11 @@ function ProductsPage() {
     setLoading(true);
     try {
       const offset = (page - 1) * pageSize;
-      const res = await clientAxiosInstance.post('/products/list', { limit: pageSize, offset });
+      const res = await clientAxiosInstance.post('/products/list', {
+        limit: pageSize,
+        offset,
+        productName: searchQuery,
+      });
       const list = (res.data?.data || []) as ClientProduct[];
       setProducts(list);
       // 同步更新购物车中的商品状态
@@ -28,7 +34,7 @@ function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, syncCartWithProducts]);
+  }, [page, pageSize, syncCartWithProducts, searchQuery]);
 
   useEffect(() => {
     fetchProducts();

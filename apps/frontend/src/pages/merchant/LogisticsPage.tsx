@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
 import { TopBar } from '@/components/merchantComponents/TopBar';
-import { Card, Button, Space, Spin, Tag, List, message } from 'antd';
-import { ReloadOutlined, PlusOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Card, Button, Space, Spin, Tag, List, message, Popconfirm } from 'antd';
+import {
+  ReloadOutlined,
+  PlusOutlined,
+  CheckCircleOutlined,
+  MinusCircleOutlined,
+} from '@ant-design/icons';
 import { merchantAxiosInstance } from '@/utils/axios';
 import type { LogisticsProvider } from '@/types/logistics';
 import { Helicopter, Motorbike, Truck } from 'lucide-react';
@@ -30,10 +35,22 @@ function LogisticsPage() {
     setRegistering(logisticsId);
     try {
       await merchantAxiosInstance.post('/logistics-provider/register', { logisticsId });
-      message.success('注册成功');
       // 更新本地状态
       setProviders((prev) =>
         prev.map((p) => (p.logisticsId === logisticsId ? { ...p, isRegistered: true } : p))
+      );
+    } finally {
+      setRegistering(null);
+    }
+  }
+
+  async function handleUnRegister(logisticsId: string) {
+    setRegistering(logisticsId);
+    try {
+      await merchantAxiosInstance.post('/logistics-provider/unregister', { logisticsId });
+      // 更新本地状态
+      setProviders((prev) =>
+        prev.map((p) => (p.logisticsId === logisticsId ? { ...p, isRegistered: false } : p))
       );
     } finally {
       setRegistering(null);
@@ -67,9 +84,26 @@ function LogisticsPage() {
                     variant="borderless"
                     actions={[
                       item.isRegistered ? (
-                        <Button type="text" disabled icon={<CheckCircleOutlined />}>
-                          已注册
-                        </Button>
+                        <>
+                          <Button type="text" disabled icon={<CheckCircleOutlined />}>
+                            已注册
+                          </Button>
+                          <Popconfirm
+                            title="确认取消合作吗？"
+                            onConfirm={() => handleUnRegister(item.logisticsId)}
+                            okText="取消合作"
+                            cancelText="不取消"
+                          >
+                            <Button
+                              type="link"
+                              danger
+                              icon={<MinusCircleOutlined />}
+                              loading={registering === item.logisticsId}
+                            >
+                              取消合作
+                            </Button>
+                          </Popconfirm>
+                        </>
                       ) : (
                         <Button
                           type="primary"
