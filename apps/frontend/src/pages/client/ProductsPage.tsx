@@ -4,6 +4,7 @@ import { Pagination } from 'antd';
 import ProductGrid from '../../components/clientComponents/product/ProductGrid';
 import { clientAxiosInstance } from '@/utils/axios';
 import type { ClientProduct } from '@/types/product';
+import ClientTopBar from '@/components/clientComponents/ClientTopBar';
 
 function ProductsPage() {
   const [products, setProducts] = useState<ClientProduct[]>([]);
@@ -32,10 +33,7 @@ function ProductsPage() {
   return (
     <main className="px-4 pt-12 pb-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <div>
-          <h1 className="mb-2 text-3xl font-bold text-gray-900">商品选购</h1>
-          <p className="text-gray-500">选购您心仪的商品</p>
-        </div>
+        <ClientTopBar title="商品选购" subTitle="选择您心仪的商品" />
       </div>
       <section className="h-full px-4 py-12 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">

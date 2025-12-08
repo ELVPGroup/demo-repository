@@ -1,4 +1,3 @@
-import { TopBar } from '@/components/merchantComponents/TopBar';
 import { useParams, useNavigate } from 'react-router';
 import { ArrowLeft, Hash, Truck, MapPin, LogOut } from 'lucide-react';
 import { Alert, Button, message } from 'antd';
@@ -9,6 +8,7 @@ import ProductList from '@/commonpart/ProductList';
 import RecipientInfo from '@/commonpart/RecipientInfo';
 import ShippingTimeline from '@/commonpart/ShippingTimeline';
 import RouteMap from '@/components/RouteMap';
+import ClientTopBar from '@/components/clientComponents/ClientTopBar';
 
 const OrderDetailPage = () => {
   const { orderId } = useParams();
@@ -38,41 +38,20 @@ const OrderDetailPage = () => {
     }
 
     // 默认使用发货地址
-    return order.shippingFrom?.location || order.addressInfo?.location;
+    return order.shippingFrom?.location;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="ml-60 px-10 py-6">
+    <div className="flex min-h-screen flex-col items-center bg-gray-50">
+      <main className="max-w-4xl px-10 py-6">
         <div className="flex flex-row justify-between gap-4">
-          <TopBar title={`订单详情 - ${orderId || ''}`} />
+          <ClientTopBar title={`订单详情 - ${orderId || ''}`} />
 
-          <div className="flex flex-row gap-4">
-            {/* 返回到客户端订单列表 */}
-            <Button onClick={() => navigate('/client')} color="primary">
-              <ArrowLeft size={18} />
-              <span>返回订单列表</span>
-            </Button>
-
-            {/* 退出登录，返回首页 */}
-            <Button
-              danger
-              icon={<LogOut size={16} />}
-              onClick={() => {
-                // 清除本地存储的认证信息
-                localStorage.removeItem('token');
-                localStorage.removeItem('userInfo');
-                sessionStorage.clear();
-                // 显示成功消息
-                message.success('已成功退出登录');
-                // 跳转到首页
-                navigate('/');
-              }}
-              className="flex items-center gap-2"
-            >
-              退出登录
-            </Button>
-          </div>
+          {/* 返回到客户端订单列表 */}
+          <Button onClick={() => navigate('/client/orders')} color="primary">
+            <ArrowLeft size={18} />
+            <span>返回订单列表</span>
+          </Button>
         </div>
 
         {/* 错误提示 */}
@@ -92,10 +71,10 @@ const OrderDetailPage = () => {
           </div>
         ) : (
           /* 调整布局：移除了原来的 grid-cols-3，改为单列或最大宽度限制的布局 */
-          <div className="mx-auto mt-6 max-w-4xl space-y-6">
+          <div className="mx-auto mt-6 space-y-6">
             <ProductList products={order.products} />
 
-            <RecipientInfo addressInfo={order.addressInfo} />
+            <RecipientInfo addressInfo={order.shippingTo} />
 
             <ShippingTimeline timeline={order.timeline} />
 
