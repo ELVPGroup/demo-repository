@@ -19,8 +19,14 @@ export async function handleMessage(ws: WebSocket, raw: string, user: JwtPayload
           ws.send(JSON.stringify({ error: '没有访问权限' }));
           break;
         }
-        subscribeOrderShipping(ws, numericId);
-        ws.send(JSON.stringify({ type: 'shipping_subscribed', orderId: numericId }));
+        const state = await subscribeOrderShipping(ws, numericId);
+        ws.send(
+          JSON.stringify({
+            type: 'shipping_subscribed',
+            orderId: numericId,
+            ...(state ? { data: state } : {}),
+          })
+        );
         break;
       }
 
