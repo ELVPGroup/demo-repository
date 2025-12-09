@@ -29,6 +29,7 @@ interface RouteMapProps {
   // 可选的距离和预计时间
   distance?: number;
   estimatedTime?: number;
+  orderId?: string;
   
   // 可选的UI配置
   showControls?: boolean;
@@ -52,6 +53,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
   distance,
   estimatedTime,
   routeData = {},
+  orderId,
   showControls = true,
   showInfoCard = true,
   showProgressIndicator = true,
@@ -97,19 +99,6 @@ const RouteMap: React.FC<RouteMapProps> = ({
     };
   });
 
-  // 处理缩放变化
-  const handleZoomIn = () => {
-    const newZoom = Math.min(zoom + 0.2, 2);
-    setZoom(newZoom);
-    onZoomChange?.(newZoom);
-  };
-
-  const handleZoomOut = () => {
-    const newZoom = Math.max(zoom - 0.2, 0.5);
-    setZoom(newZoom);
-    onZoomChange?.(newZoom);
-  };
-
   // 如果没有传入当前位置，使用起点
   const defaultCurrentLocation = currentLocation || startLocation.coords;
 
@@ -125,7 +114,9 @@ const RouteMap: React.FC<RouteMapProps> = ({
         route={mapRouteData}
         showRoute={true}
         currentLocation={defaultCurrentLocation}
+        orderId={orderId}
         onMapClick={onMapClick}
+        enableLocationTracking={true} // 启用实时位置跟踪
       />
 
       {/* 可选的浮动信息卡片 */}
@@ -146,7 +137,9 @@ const RouteMap: React.FC<RouteMapProps> = ({
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">距离:</span>
-              <span className="font-medium">{distance} km</span>
+              <span className="font-medium">
+                {(Number(distance) || 0).toFixed(2)} km
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">预计时间:</span>
@@ -156,7 +149,15 @@ const RouteMap: React.FC<RouteMapProps> = ({
 
           {/* 进度条 */}
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-            <div className="h-full w-3/4 animate-pulse rounded-full bg-blue-600"></div>
+            <div 
+              className={`h-full animate-pulse rounded-full bg-blue-600 ${
+                (Number(distance) || 0) > 1000 
+                  ? 'w-1/20'      // 需要自定义或在 tailwind.config.js 中配置
+                  : (Number(distance) || 0) < 100
+                    ? 'w-full'    // 100%
+                    : 'w-1/2'     // 50%
+              }`}
+            ></div>
           </div>
         </div>
       )}

@@ -13,9 +13,17 @@ function DemoWebSocketPage() {
 
   // 连接 WebSocket 服务器，第一个参数为空字符串表示连接到 base_ws_url；
   // 第二个参数为消息处理函数，用于接收服务器传来消息，并作处理
-  const { sendMessage, connected } = useWebSocket('', (msg) =>
-    setMessages((prev) => [...prev, msg as Message])
-  );
+  const { sendMessage, connected } = useWebSocket('', (msg) => {
+    // 添加 console.log 来记录新消息
+    console.log('收到新的 WebSocket 消息:', msg);
+    
+    setMessages((prev) => {
+      const newMessages = [...prev, msg as Message];
+      // 也可以在这里添加 console.log，显示更新后的消息数量
+      console.log(`消息数量更新: ${prev.length} -> ${newMessages.length}`);
+      return newMessages;
+    });
+  });
 
   const orderId = useParams().orderId;
   useEffect(() => {
@@ -29,6 +37,11 @@ function DemoWebSocketPage() {
       sendMessage(MessageTypeEnum.ShippingUnsubscribe, orderId);
     };
   }, [sendMessage, connected, orderId]);
+
+  // 可选：在组件渲染时显示当前消息数量
+  useEffect(() => {
+    console.log(`当前共 ${messages.length} 条消息`);
+  }, [messages]);
 
   return (
     <div style={{ padding: 24 }}>

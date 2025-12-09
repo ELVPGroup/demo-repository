@@ -8,6 +8,12 @@ export enum MessageTypeEnum {
   ShippingSubscribe = 'shipping_subscribe',
   /** 取消物流位置更新订阅 */
   ShippingUnsubscribe = 'shipping_unsubscribe',
+
+  // 新增位置相关的消息类型
+  LocationSubscribe = 'LOCATION_SUBSCRIBE',
+  LocationUnsubscribe = 'LOCATION_UNSUBSCRIBE',
+  LocationUpdate = 'LOCATION_UPDATE',
+  LocationHistory = 'LOCATION_HISTORY',
 }
 
 /**
