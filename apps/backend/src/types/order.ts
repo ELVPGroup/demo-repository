@@ -61,7 +61,6 @@ export type CreateOrderBody = {
 export type UpdateOrderServicePayload = {
   status?: OrderStatus | undefined;
   totalPrice?: number | undefined;
-  shippingInfo?: Optional<Address, 'name' | 'phone' | 'address'> | undefined;
   products?: Array<Product> | undefined;
 };
 

@@ -3,7 +3,8 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  amount: number;
+  quantity: number; // 商品购买数量
+  amount: number; // 商品库存
   imageUrl: string;
   merchantId: number;
 }

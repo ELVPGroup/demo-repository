@@ -217,26 +217,13 @@ export class MerchantOrderController {
 
       const updatePayload = {
         status: getDictKey(body.status!, orderStatusDict) as OrderStatus,
-        ...(body.shippingInfo?.addressInfoId
-          ? {
-              shippingInfo: getDefinedKeyValues({
-                addressInfoId: parseServiceId(body.shippingInfo.addressInfoId).id,
-                name: body.shippingInfo.name,
-                phone: body.shippingInfo.phone,
-                address: body.shippingInfo.address,
-              }) as UpdateOrderServicePayload['shippingInfo'],
-            }
-          : {}),
         ...(Array.isArray(body.products) && body.products.length > 0
           ? {
               products: body.products
                 .map((product) =>
                   getDefinedKeyValues({
                     productId: product.productId ? parseServiceId(product.productId).id : undefined,
-                    name: product.name,
-                    description: product.description,
-                    price: product.price !== undefined ? Number(product.price) : undefined,
-                    amount: product.amount !== undefined ? Number(product.amount) : undefined,
+                    quantity: product.quantity !== undefined ? Number(product.quantity) : undefined,
                   })
                 )
                 .filter(

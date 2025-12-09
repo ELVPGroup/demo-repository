@@ -4,7 +4,7 @@ export interface OrderProduct {
   name: string;
   description: string;
   price: number;
-  amount: number;
+  quantity: number;
   imageUrl?: string;
 }
 
