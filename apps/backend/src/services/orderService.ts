@@ -451,6 +451,7 @@ export class OrderService {
       isTimeRisk: boolean;
     }> = {};
     if ((statusVal === 'PENDING' || statusVal === 'SHIPPED') && from && to) {
+      // 状态为 PENDING （未发货）或 SHIPPED（已发货）时，计算当前位置、距离、预计到达时间并返回
       if (statusVal === 'PENDING') {
         const currentLocation: [number, number] = [from.longitude, from.latitude];
         let distanceKm = 0;
@@ -511,6 +512,17 @@ export class OrderService {
       }
     }
 
+    // 计算自动确认收货时间戳
+    let timestampToAutoConfirm: number | undefined;
+    if (statusVal === 'SHIPPED' || statusVal === 'DELIVERED') {
+      // 查找发货时间
+      const shippedItem = timeline.find((item) => item.shippingStatus === 'SHIPPED');
+      if (shippedItem) {
+        // 发货时间 + 10天
+        timestampToAutoConfirm = dayjs(shippedItem.time).add(10, 'day').valueOf();
+      }
+    }
+
     return {
       orderId: generateServiceId(order.orderId, ServiceKey.order),
       merchantId: generateServiceId(order.merchantId!, ServiceKey.merchant),
@@ -558,6 +570,7 @@ export class OrderService {
       ...(extras.distance !== undefined ? { distance: extras.distance } : {}),
       ...(extras.estimatedTime ? { estimatedTime: extras.estimatedTime } : {}),
       ...(typeof extras.isTimeRisk === 'boolean' ? { isTimeRisk: extras.isTimeRisk } : {}),
+      ...(timestampToAutoConfirm ? { timestampToAutoConfirm } : {}),
     };
   }
 
@@ -685,6 +698,42 @@ export class OrderService {
     }
 
     return { createdOrderIds, failedGroups };
+  }
+
+  /**
+   * 客户端确认收货
+   */
+  async confirmReceipt(userId: number, orderId: number) {
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      throw new Error('订单不存在');
+    }
+    if (order.userId !== userId) {
+      throw new Error('没有权限操作该订单');
+    }
+
+    // 只有订单状态为SHIPPED（运输中）、DELIVERED（已送达）才可以确认收货
+    if (order.status !== 'SHIPPED' && order.status !== 'DELIVERED') {
+      throw new Error('当前订单状态不可确认收货');
+    }
+
+    // 更新状态为 COMPLETED 并添加时间轴
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { orderId },
+        data: { status: 'COMPLETED' },
+      });
+
+      await tx.timelineItem.create({
+        data: {
+          orderDetail: { connect: { orderId } },
+          shippingStatus: 'DELIVERED', // 确认收货即代表已签收
+          description: '用户确认收货，订单已完成',
+        },
+      });
+    });
+
+    return this.getOrderDetail(orderId);
   }
 }
 

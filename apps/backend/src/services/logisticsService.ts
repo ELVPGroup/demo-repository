@@ -1,9 +1,15 @@
-import type { GeoPoint, SimulationConfig, SimulationState } from '@evlp/shared/types/index.js';
+import type {
+  GeoPoint,
+  OrderStatus,
+  ShippingStatus,
+  SimulationConfig,
+  SimulationState,
+} from '@evlp/shared/types/index.js';
 import { broadcastOrderShipping } from '@/ws/orderSubscriptions.js';
 import prisma from '@/db.js';
 import { generateRealtimeLocationFromState } from '@/utils/locationSimulatiom.js';
 
-const PUSH_INTERVAL_MS = 5000;
+const PUSH_INTERVAL_MS = 2000;
 
 export class LogisticsService {
   private serviceUrl = process.env['SIMULATION_SERVICE_URL'] || 'http://localhost:9001';
@@ -83,8 +89,8 @@ export class LogisticsService {
     // 广播轨迹更新
     broadcastOrderShipping(orderId, { ...generateRealtimeLocationFromState(state) });
 
-    if (state.progress >= 1) {
-      await this.handleDelivered(orderId);
+    if (state.progress >= 0.99) {
+      await this.handleShipingStatusChange(orderId, 'DELIVERED', 'DELIVERED', '订单送达');
       this.stopPolling(orderId);
       // 停止模拟
       this.stopSimulation(orderId);
@@ -99,14 +105,19 @@ export class LogisticsService {
     }
   }
 
-  private async handleDelivered(orderId: number) {
+  private async handleShipingStatusChange(
+    orderId: number,
+    newOrderStatus: OrderStatus,
+    newShippingStatus: ShippingStatus,
+    description: string
+  ) {
     await prisma.$transaction(async (tx) => {
-      await tx.order.update({ where: { orderId }, data: { status: 'COMPLETED' } });
+      await tx.order.update({ where: { orderId }, data: { status: newOrderStatus } });
       await tx.timelineItem.create({
         data: {
           orderDetail: { connect: { orderId } },
-          shippingStatus: 'DELIVERED',
-          description: '订单送达',
+          shippingStatus: newShippingStatus,
+          description,
         },
       });
     });

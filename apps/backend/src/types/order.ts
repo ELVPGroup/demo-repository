@@ -1,4 +1,4 @@
-export type OrderStatus = 'PENDING' | 'SHIPPED' | 'COMPLETED' | 'CANCELED';
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELED';
 import type { Optional, PaginationParams, SortParams } from './index.js';
 import type { Product } from './product.js';
 import type { Address } from './address.js';

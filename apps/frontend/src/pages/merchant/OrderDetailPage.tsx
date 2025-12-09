@@ -656,7 +656,7 @@ const OrderDetailPage = () => {
                         border: buttonStyle.border,
                       }}
                     >
-                      {order.shippingStatus || '未知'}
+                      {order.status || '未知'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">

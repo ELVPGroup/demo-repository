@@ -1,5 +1,6 @@
 import { addressModel } from '@/models/addressModel.js';
 import { amapClient } from '@evlp/shared/utils/amapClient.js';
+import { deliveryAreaService } from '@/services/deliveryAreaService.js';
 import type { Prisma } from 'generated/prisma/client.js';
 import prisma from '@/db.js';
 
@@ -76,8 +77,23 @@ export class AddressService {
    * 添加地址
    */
   async createAddress(payload: CreateAddressPayload) {
+    const roleId = this.extractRoleId(payload);
+    // 检查是否已存在地址
+    const existingCount = await prisma.addressInfo.count({
+      where: roleId,
+    });
+
     const data = await this.geocodeAndBuildCreateData(payload);
     const newAddress = await addressModel.create(data);
+
+    // 如果是第一个地址，设为默认地址
+    if (existingCount === 0) {
+      await this.setDefaultAddress({
+        ...roleId,
+        addressInfoId: newAddress.addressInfoId,
+      });
+    }
+
     return newAddress;
   }
 
@@ -202,6 +218,12 @@ export class AddressService {
       await prisma.merchant.update({
         where: { merchantId: roleId.merchantId },
         data: { defaultAddressId: addressInfoId },
+      });
+      // 更新商家的配送区域中心点
+      await deliveryAreaService.upsert({
+        merchantId: roleId.merchantId,
+        center: [address.longitude, address.latitude],
+        radius: 50000, // 默认配送范围50km
       });
     }
 
