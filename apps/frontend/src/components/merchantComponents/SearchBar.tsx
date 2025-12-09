@@ -14,7 +14,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ value, onChange, onSearch 
     <div className="mb-6 flex items-center gap-4">
 
       <Input
-        placeholder="搜索订单编号"
+        placeholder="搜索用户名称"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {

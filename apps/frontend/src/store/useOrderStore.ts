@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { merchantAxiosInstance, clientAxiosInstance } from '@/utils/axios';
 import { useUserStore } from './userStore';
 import type { OrderQueryParams, OrderItem, OrderListResponse } from '../types/order';
-import { debounced } from '@/utils/general';
 
 interface OrderStore {
   params: OrderQueryParams;

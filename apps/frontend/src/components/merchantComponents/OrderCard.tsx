@@ -34,6 +34,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
       </div>
 
       <p className="mt-2 text-sm text-gray-500">用户ID：{order.userId}</p>
+      <p className="mt-2 text-sm text-gray-500">用户姓名：{order.userName}</p>
       <p className="mt-4 text-sm text-gray-600">下单时间：{order.createdAt}</p>
 
       <div className="mt-4 flex items-center justify-between">

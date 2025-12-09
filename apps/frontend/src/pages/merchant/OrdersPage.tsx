@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Pagination, Spin } from 'antd';
+import { Pagination, Segmented, Spin, Space } from 'antd';
 import { TopBar } from '@/components/merchantComponents/TopBar';
 import { SearchBar } from '@/components/merchantComponents/SearchBar';
 import { StatusFilter } from '@/components/merchantComponents/StatusFilter';
 import CardGrid from '@/components/merchantComponents/CardGrid';
+import OrderList from '@/components/merchantComponents/OrderList';
 import { useOrderStore } from '@/store/useOrderStore';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -29,61 +30,25 @@ const OrdersPage: React.FC = () => {
   const [sort, setSort] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
 
-  const { orders, loading, setParams, fetchOrders } = useOrderStore();
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
+
+  const { orders, total, loading, setParams, fetchOrders } = useOrderStore();
 
   // 使用防抖处理搜索输入，延迟 500ms
   const debouncedSearch = useDebounce(search, 500);
 
-  // 将 StatusFilter 的 sortBy 值映射到 API 期望的值
-  const mapSortByToApi = (
-    value: 'createdAt' | 'amount' | 'id'
-  ): 'createdAt' | 'totalPrice' | 'orderId' => {
-    const mapping = {
-      createdAt: 'createdAt',
-      amount: 'totalPrice',
-      id: 'orderId',
-    } as const;
-    return mapping[value];
-  };
-
-  // 当过滤条件、页码改变时，更新 store 参数并重新获取数据（不包含搜索，搜索在前端过滤）
+  // 当过滤条件、页码或防抖后的搜索值改变时，更新 store 参数并重新获取数据
   useEffect(() => {
     setParams({
       status: mapStatusToApi(status), // 使用映射函数转换状态：待发货 -> PENDING, 运输中 -> SHIPPED, 已完成 -> COMPLETED
-      limit: 1000, // 获取更多数据以便前端过滤（可以根据实际情况调整）
-      offset: 0,
-      sort,
-      sortBy: mapSortByToApi(sortBy), // 映射 sortBy：amount -> totalPrice, id -> orderId
+      limit: ITEMS_PER_PAGE,
+      offset: (currentPage - 1) * ITEMS_PER_PAGE,
+      sort: sort,
+      sortBy: sortBy, 
+      customerName: debouncedSearch.trim() || undefined, // 使用防抖后的搜索值，按客户姓名搜索
     });
     fetchOrders();
-  }, [status, sortBy, sort, setParams, fetchOrders]);
-
-  // 使用 useMemo 过滤订单：根据搜索关键词和状态过滤
-  const filteredOrders = useMemo(() => {
-    let result = [...orders];
-
-    // 根据搜索关键词过滤订单编号
-    if (debouncedSearch.trim()) {
-      const searchLower = debouncedSearch.trim().toLowerCase();
-      result = result.filter((order) =>
-        order.orderId.toLowerCase().includes(searchLower)
-      );
-    }
-
-    // 根据状态过滤（前端状态已经是中文，直接匹配）
-    if (status !== '全部') {
-      result = result.filter((order) => order.status === status);
-    }
-
-    return result;
-  }, [orders, debouncedSearch, status]);
-
-  // 计算分页后的订单
-  const paginatedOrders = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
-    const end = start + ITEMS_PER_PAGE;
-    return filteredOrders.slice(start, end);
-  }, [filteredOrders, currentPage]);
+  }, [status, sortBy, sort, currentPage, debouncedSearch, setParams, fetchOrders]);
 
   // 分页改变处理
   const handlePageChange = (page: number) => {
@@ -97,28 +62,44 @@ const OrdersPage: React.FC = () => {
     setCurrentPage(1);
   };
 
+  const segmentedOptions = useMemo(
+    () => [
+      { label: '卡片', value: 'card' },
+      { label: '列表', value: 'list' },
+    ],
+    []
+  );
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-layout)' }}>
       <main className="ml-60 flex-1 px-10 py-6">
         <TopBar title="订单管理" />
 
-        <SearchBar value={search} onChange={setSearch} onSearch={handleSearch} />
+        <SearchBar value={search} onChange={(value) => setSearch(value)} onSearch={handleSearch} />
 
-        <StatusFilter
-          status={status}
-          setStatus={setStatus}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          sort={sort}
-          setSort={setSort}
-        />
+        <Space style={{ marginTop: 16, width: '100%', justifyContent: 'space-between' }}>
+          <Segmented
+            options={segmentedOptions}
+            value={viewMode}
+            onChange={(v) => setViewMode(v as 'card' | 'list')}
+          />
+          <StatusFilter
+            status={status}
+            setStatus={setStatus}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            sort={sort}
+            setSort={setSort}
+          />
+        </Space>
 
-        {/* Orders Grid */}
+
+        {/* Orders Display */}
         {loading && orders.length === 0 ? (
           <div className="mt-6 flex h-100 items-center justify-center">
             <Spin size="large" />
           </div>
-        ) : filteredOrders.length === 0 ? (
+        ) : orders.length === 0 ? (
           <div
             className="mt-6 flex h-100 items-center justify-center text-center"
             style={{ color: 'var(--color-text-secondary)' }}
@@ -126,15 +107,15 @@ const OrdersPage: React.FC = () => {
             {search.trim() ? '未找到匹配的订单' : '暂无订单数据'}
           </div>
         ) : (
-          <CardGrid orders={paginatedOrders} />
+          viewMode === 'card' ? <CardGrid /> : <OrderList />
         )}
 
         {/* 分页组件 */}
-        {!loading && filteredOrders.length > 0 && (
+        {!loading && orders.length > 0 && (
           <div className="mt-6 flex justify-center">
             <Pagination
               current={currentPage}
-              total={filteredOrders.length}
+              total={total}
               pageSize={ITEMS_PER_PAGE}
               showSizeChanger={false}
               showQuickJumper

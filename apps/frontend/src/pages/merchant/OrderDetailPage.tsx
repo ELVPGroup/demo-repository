@@ -281,10 +281,6 @@ const OrderDetailPage = () => {
 
           {/* 配送信息 */}
           <Card size="small" title="配送信息" style={{ marginBottom: 16 }}>
-            <Form.Item label="地址信息ID" name="addressInfoId">
-              <Input placeholder="地址信息ID" />
-            </Form.Item>
-
             <Form.Item
               label="收件人姓名"
               name="name"
