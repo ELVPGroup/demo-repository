@@ -117,7 +117,7 @@ const ShippingPage: React.FC = () => {
     <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg-layout)' }}>
       <main className="ml-60 flex-1 px-10 py-6">
         <div className="mb-8 flex items-center justify-between">
-          <TopBar title="地址管理" />
+          <TopBar title="发货地址管理" />
           <Button type="primary" icon={<Plus size={18} />} onClick={handleAdd} size="large">
             添加地址
           </Button>
