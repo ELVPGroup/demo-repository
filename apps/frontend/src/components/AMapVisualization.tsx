@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState } from 'react';
+import { useWebSocket, MessageTypeEnum } from '@/hooks/useWebSocket';
 
 type LngLat = [number, number];
+
+interface Message {
+  type: MessageTypeEnum;
+  data?: unknown;
+}
 
 interface AMapVisualizationProps {
   center?: LngLat;
@@ -16,6 +22,8 @@ interface AMapVisualizationProps {
   animationDurationMs?: number;
   currentLocationOffsetX?: number;
   onBoundsChange?: (northEast: { lat: number; lng: number }, southWest: { lat: number; lng: number }) => void;
+  orderId?: string; // 添加订单ID参数
+  enableLocationTracking?: boolean; // 是否启用位置跟踪
 }
 
 // 配置高德地图安全密钥
@@ -85,6 +93,8 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   animationDurationMs = 30,
   currentLocationOffsetX = 6,
   onBoundsChange,
+  orderId, // 从父组件传入订单ID
+  enableLocationTracking = false, // 默认不启用位置跟踪
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const amapRef = useRef<any>(null);
@@ -97,6 +107,91 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   const mapMarkersRef = useRef<any[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [routePath, setRoutePath] = useState<LngLat[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const previousLocationRef = useRef<LngLat | null>(null);
+
+  // 连接 WebSocket 服务器，第一个参数为空字符串表示连接到 base_ws_url；
+    // 第二个参数为消息处理函数，用于接收服务器传来消息，并作处理
+    const { sendMessage, connected } = useWebSocket('', (msg) => {
+      // 添加 console.log 来记录新消息
+      // console.log('收到新的 WebSocket 消息:', msg);
+      // console.log('收到新的 WebSocket 消息:', msg.data.location);
+      
+      // 获取新位置
+      if (msg.data?.location) {
+        const newLocation = msg.data.location as LngLat;
+        console.log('新位置:', newLocation);
+        
+        // 添加到消息列表
+        setMessages((prev) => {
+        const newMessages = [...prev, msg as Message];
+        // 也可以在这里添加 console.log，显示更新后的消息数量
+        // console.log(`消息数量更新: ${prev} -> ${newMessages}`);
+        return newMessages;
+        });
+        
+        // 如果有上一个位置，执行动画
+        if (previousLocationRef.current) {
+          animateMove(previousLocationRef.current, newLocation);
+        } else {
+          // 第一次收到位置，直接设置
+          updateMarkerPosition(newLocation);
+        }
+        
+        // 保存为上一个位置
+        previousLocationRef.current = newLocation;
+      }     
+    });
+
+    // 动画函数：从一个位置移动到另一个位置
+    const animateMove = (from: LngLat, to: LngLat) => {
+      if (!movingMarkerRef.current || !amapRef.current) return;
+      
+      // 清除之前的动画
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      
+      const startTime = Date.now();
+      const duration = 2000; // 2秒动画，可根据需要调整
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // 线性插值计算当前位置
+        const currentLng = from[0] + (to[0] - from[0]) * progress;
+        const currentLat = from[1] + (to[1] - from[1]) * progress;
+        
+        // 更新标记位置
+        movingMarkerRef.current.setPosition(new (window as any).AMap.LngLat(currentLng, currentLat));
+        
+        if (progress < 1) {
+          animationRef.current = requestAnimationFrame(animate);
+        }
+      };
+      
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    // 更新标记位置的函数
+    const updateMarkerPosition = (position: LngLat) => {
+      if (movingMarkerRef.current && amapRef.current) {
+        movingMarkerRef.current.setPosition(new (window as any).AMap.LngLat(position[0], position[1]));
+      }
+    };
+
+    useEffect(() => {
+      if (!connected) {
+        return;
+      }
+      // 订阅物流更新
+      sendMessage(MessageTypeEnum.ShippingSubscribe, orderId);
+      return () => {
+        // 销毁时取消订阅物流更新
+        sendMessage(MessageTypeEnum.ShippingUnsubscribe, orderId);
+      };
+  }, [sendMessage, connected, orderId]);
 
   // 轨迹动画
   const startRouteAnimation = (AMap: any, map: any, path: LngLat[], currentLocation?: LngLat) => {
@@ -162,7 +257,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
     console.log('Route animation from index', startIndex, 'to', middleIndex);
     let currentIndex = startIndex;
     const totalSteps = Math.max(1, middleIndex - startIndex);
-    const animationDuration = animationDurationMs;
+    const animationDuration = 1000;
     const stepTime = Math.max(5, Math.floor(animationDuration / Math.max(1, totalSteps)));
     console.debug('route animation timing', { totalSteps, animationDuration, stepTime });
     const animate = () => {
