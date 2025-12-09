@@ -339,7 +339,7 @@ const MyOrdersPage: React.FC = () => {
     const displayStatus = statusOverrides[item.orderId]?.status || item.status;
     const config = getStatusConfig(displayStatus as OrderStatus | '已签收');
     return (
-      <List.Item>
+      <List.Item className="border-b-0">
         <Card className="w-full shadow-sm hover:shadow-md transition-shadow" styles={{ body: { padding: '16px' } }}>
           <div className="mb-3 flex items-center justify-between border-b border-gray-100 pb-2">
             <span className="font-medium text-gray-900">订单号: {item.orderId}</span>
@@ -458,6 +458,9 @@ const MyOrdersPage: React.FC = () => {
             </div>
           </div>
         </Card>
+
+        {/* 间隔 */}
+        <div className="hidden md:block h-6"></div>
 
         {/* 订单列表 - 桌面端 Table */}
         <Card bordered={false} className="hidden shadow-sm md:block">
