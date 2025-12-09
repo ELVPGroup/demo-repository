@@ -12,10 +12,25 @@ export class LogisticsService {
 
   async simulateShipment(
     orderId: number,
-    origin: GeoPoint,
-    destination: GeoPoint,
+    origin?: GeoPoint,
+    destination?: GeoPoint,
     options?: Partial<SimulationConfig>
   ) {
+    if (!origin || !destination) {
+      // 缺少起点或终点，代表不是新启动的模拟，先从模拟服务器请求当前状态
+      const state = await this.getShipmentState(orderId);
+      if (state && state.progress !== 1) {
+        // 服务已经在运行中。再次调用可能是因为后端服务中断又重启，导致内存中的pollingTimers丢失对订单的跟踪
+        // 重新启动轮询，确保能够及时获取最新状态
+        this.stopPolling(orderId);
+        this.startPolling(orderId);
+        return;
+      } else {
+        // 当前不存在已启动的服务。而缺少起点或终点，就无法启动新的模拟轨迹服务
+        throw new Error('缺少起点或终点，无法启动新的模拟轨迹服务');
+      }
+    }
+
     // 调用模拟服务启动模拟
     const response = await fetch(`${this.serviceUrl}/simulations`, {
       method: 'POST',
@@ -44,20 +59,25 @@ export class LogisticsService {
 
   private async pollShipment(orderId: number) {
     const state = await this.getShipmentState(orderId);
+
     if (!state) {
-      // Simulation might have been stopped externally or lost
+      // 如果模拟服务返回空状态，认为模拟已结束
       this.stopPolling(orderId);
       return;
     }
 
     const now = Date.now();
-    const status = state.progress <= 0 ? 'PACKING' : state.progress < 1 ? 'SHIPPED' : 'DELIVERED';
+    const shippingStatus =
+      state.progress <= 0 ? 'PACKING' : state.progress < 1 ? 'SHIPPED' : 'DELIVERED';
 
     // 广播轨迹更新
     broadcastOrderShipping(orderId, {
       location: state.location,
       timestamp: dayjs(now).format('YYYY-MM-DD HH:mm:ss'),
-      status: getDictName(status as keyof typeof shippingStatusDict, shippingStatusDict),
+      shippingStatus: getDictName(
+        shippingStatus as keyof typeof shippingStatusDict,
+        shippingStatusDict
+      ),
       progress: state.progress,
     });
 
@@ -69,7 +89,7 @@ export class LogisticsService {
     }
   }
 
-  private stopPolling(orderId: number) {
+  stopPolling(orderId: number) {
     const timer = this.pollingTimers.get(orderId);
     if (timer) {
       clearInterval(timer);

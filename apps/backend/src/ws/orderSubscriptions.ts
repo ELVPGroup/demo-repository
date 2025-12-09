@@ -1,3 +1,4 @@
+import { logisticsService } from '@/services/logisticsService.js';
 import { generateServiceId, ServiceKey } from '@/utils/serverIdHandler.js';
 import { WebSocket } from 'ws';
 
@@ -9,10 +10,18 @@ import { WebSocket } from 'ws';
 const orderSubscriptions = new Map<number, Set<WebSocket>>();
 
 /** 订阅指定订单的轨迹更新 */
-export function subscribeOrderShipping(ws: WebSocket, orderId: number) {
+export async function subscribeOrderShipping(ws: WebSocket, orderId: number) {
   const set = orderSubscriptions.get(orderId) ?? new Set<WebSocket>();
   set.add(ws);
+
   orderSubscriptions.set(orderId, set);
+
+  // 尝试恢复物流模拟服务（后端重启导致轮询丢失）
+  try {
+    await logisticsService.simulateShipment(orderId);
+  } catch (error) {
+    console.error(`恢复 ${orderId} 订单的物流模拟服务失败`, error);
+  }
 }
 
 /** 取消订阅指定订单的轨迹更新 */
@@ -20,7 +29,11 @@ export function unsubscribeOrderShipping(ws: WebSocket, orderId: number) {
   const set = orderSubscriptions.get(orderId);
   if (set) {
     set.delete(ws);
-    if (set.size === 0) orderSubscriptions.delete(orderId);
+    if (set.size === 0) {
+      // 如果不再有任何客户监听此订单，则取消对该订单物流轨迹的轮询
+      logisticsService.stopPolling(orderId);
+      orderSubscriptions.delete(orderId);
+    }
   }
 }
 
@@ -47,6 +60,8 @@ export function getOrderSubscriberCount(orderId: number) {
 export function cleanupSubscriptionsFor(ws: WebSocket) {
   for (const [orderId, set] of orderSubscriptions.entries()) {
     if (set.has(ws)) {
+      // 取消对物流轨迹的轮询
+      unsubscribeOrderShipping(ws, orderId);
       set.delete(ws);
       if (set.size === 0) orderSubscriptions.delete(orderId);
     }

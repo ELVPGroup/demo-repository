@@ -457,6 +457,7 @@ export class OrderService {
           isTimeRisk: false,
         };
       } else if (statusVal === 'SHIPPED') {
+        // 已发货状态，丛模拟轨迹服务器（可替换为真实GPS调度服务地址）获取实时物流状态
         const live = await logisticsService.getShipmentState(order.orderId);
         if (live) {
           console.log('live State:', live);
