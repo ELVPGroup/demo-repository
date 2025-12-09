@@ -4,11 +4,12 @@ import Sidebar from '@/components/merchantComponents/Sidebar';
 import { ArrowLeft, Package, MapPin, Truck, Hash } from 'lucide-react';
 import { TimeLine } from '@/components/merchantComponents/TimeLine';
 import { MOCK_PACKAGE_DATA } from '@/constants';
-import { Button, Form, Modal, Input, InputNumber, Space, Card, message, Select } from 'antd';
+import { Button, Form, Modal, Input, InputNumber, Space, Card, message, Select, Image } from 'antd';
 import { useEffect, useState } from 'react';
 import { Plus, Minus } from 'lucide-react';
 import { useShippingStore } from '@/store/useShippingStore';//import shipping store
 import { useOrderDetailStore } from '@/store/useOrderDetailStore';//import order detail store
+import { BASE_SERVER_URL } from '@/config';
 
 import RouteMap from '@/components/RouteMap'; // 导入RouteMap组件
 import { orderStatusColors } from '@/theme/theme';
@@ -451,15 +452,34 @@ const OrderDetailPage = () => {
                           key={product.productId || index}
                           className="flex items-center justify-between border-b border-gray-100 pb-4"
                         >
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900">{product.name}</div>
-                            {product.description && (
-                              <div className="mt-1 text-sm text-gray-500">
-                                {product.description}
+                          <div className="flex items-center gap-4 flex-1">
+                            {/* 商品图片 */}
+                            {product.imageUrl ? (
+                              <Image
+                                src={`${BASE_SERVER_URL}${product.imageUrl}`}
+                                width={80}
+                                height={80}
+                                style={{ objectFit: 'cover', borderRadius: 8 }}
+                                preview={false}
+                                alt={product.name}
+                              />
+                            ) : (
+                              <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
+                                <Package className="h-8 w-8" />
                               </div>
                             )}
-                            <div className="mt-1 text-sm text-gray-500">
-                              数量：x{product.amount}
+                            
+                            {/* 商品信息 */}
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{product.name}</div>
+                              {product.description && (
+                                <div className="mt-1 text-sm text-gray-500">
+                                  {product.description}
+                                </div>
+                              )}
+                              <div className="mt-1 text-sm text-gray-500">
+                                数量：x{product.amount}
+                              </div>
                             </div>
                           </div>
                           <div className="text-lg font-semibold text-gray-900">
