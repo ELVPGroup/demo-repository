@@ -1,4 +1,8 @@
 import { logisticsService } from '@/services/logisticsService.js';
+import {
+  generateRealtimeLocationFromState,
+  type RealtimeLocation,
+} from '@/utils/locationSimulatiom.js';
 import { generateServiceId, ServiceKey } from '@/utils/serverIdHandler.js';
 import { WebSocket } from 'ws';
 
@@ -9,7 +13,7 @@ import { WebSocket } from 'ws';
  */
 const orderSubscriptions = new Map<number, Set<WebSocket>>();
 
-/** 订阅指定订单的轨迹更新 */
+/** 订阅指定订单的轨迹更新，如果当前有正在运行的模拟轨迹服务，则返回当前状态 */
 export async function subscribeOrderShipping(ws: WebSocket, orderId: number) {
   const set = orderSubscriptions.get(orderId) ?? new Set<WebSocket>();
   set.add(ws);
@@ -18,10 +22,15 @@ export async function subscribeOrderShipping(ws: WebSocket, orderId: number) {
 
   // 尝试恢复物流模拟服务（后端重启导致轮询丢失）
   try {
-    await logisticsService.simulateShipment(orderId);
+    const state = await logisticsService.simulateShipment(orderId, true);
+    if (state) {
+      return generateRealtimeLocationFromState(state);
+    }
+    // 如果服务未运行，启动新的模拟轨迹服务
   } catch (error) {
     console.error(`恢复 ${orderId} 订单的物流模拟服务失败`, error);
   }
+  return null;
 }
 
 /** 取消订阅指定订单的轨迹更新 */
@@ -38,7 +47,7 @@ export function unsubscribeOrderShipping(ws: WebSocket, orderId: number) {
 }
 
 /** 广播订单轨迹更新给所有订阅者 */
-export function broadcastOrderShipping(orderId: number, payload: unknown) {
+export function broadcastOrderShipping(orderId: number, payload: RealtimeLocation) {
   const set = orderSubscriptions.get(orderId);
   if (!set || set.size === 0) return;
   const msg = JSON.stringify({
@@ -60,10 +69,8 @@ export function getOrderSubscriberCount(orderId: number) {
 export function cleanupSubscriptionsFor(ws: WebSocket) {
   for (const [orderId, set] of orderSubscriptions.entries()) {
     if (set.has(ws)) {
-      // 取消对物流轨迹的轮询
+      // 取消对该订单的订阅并清理
       unsubscribeOrderShipping(ws, orderId);
-      set.delete(ws);
-      if (set.size === 0) orderSubscriptions.delete(orderId);
     }
   }
 }

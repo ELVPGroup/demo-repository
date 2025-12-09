@@ -570,9 +570,10 @@ export class OrderService {
         },
       });
     });
-    // 开始模拟发货轨迹
+    // 开始模拟发货轨迹（但不启动轮询。只有websocket连接才能启动）
     await logisticsService.simulateShipment(
       orderId,
+      false,
       [from.longitude, from.latitude],
       [to.longitude, to.latitude],
       { speedKmh: logistics.speed }
