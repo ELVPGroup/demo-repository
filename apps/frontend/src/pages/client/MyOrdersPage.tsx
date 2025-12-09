@@ -37,10 +37,33 @@ const MyOrdersPage: React.FC = () => {
   // Store
   const { orders, loading, setParams, fetchOrders } = useOrderStore();
 
-  // 状态映射
-  const getStatusConfig = (status: OrderStatus) => {
+  // 本地状态覆盖：从 localStorage 读取已签收覆盖
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, { status: string; confirmedAt: number }>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('clientOrderStatusOverrides') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'clientOrderStatusOverrides') {
+        try {
+          setStatusOverrides(JSON.parse(e.newValue || '{}'));
+        } catch {
+          // Ignore JSON parse error
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  // 状态映射（含已签收）
+  const getStatusConfig = (status: OrderStatus | '已签收') => {
     const statusMap: Record<
-      OrderStatus | '已取消',
+      OrderStatus | '已取消' | '已签收',
       { text: string; color: string; textColor: string }
     > = {
       待发货: {
@@ -53,6 +76,11 @@ const MyOrdersPage: React.FC = () => {
         color: orderStatusColors['运输中']?.bg || orderStatusColors.default.bg,
         textColor: orderStatusColors['运输中']?.text || orderStatusColors.default.text,
       },
+      已送达: {
+        text: '已送达',
+        color: orderStatusColors['已完成']?.bg || orderStatusColors.default.bg,
+        textColor: orderStatusColors['已完成']?.text || orderStatusColors.default.text,
+      },
       已完成: {
         text: '已完成',
         color: orderStatusColors['已完成']?.bg || orderStatusColors.default.bg,
@@ -62,6 +90,11 @@ const MyOrdersPage: React.FC = () => {
         text: '已取消',
         color: orderStatusColors.default.bg,
         textColor: orderStatusColors.default.text,
+      },
+      已签收: {
+        text: '已签收',
+        color: orderStatusColors['已完成']?.bg || orderStatusColors.default.bg,
+        textColor: orderStatusColors['已完成']?.text || orderStatusColors.default.text,
       },
     };
     return (
@@ -81,7 +114,6 @@ const MyOrdersPage: React.FC = () => {
       offset: undefined,
       sort: undefined,
       sortBy: undefined,
-      orderId: undefined, 
     });
     fetchOrders();
   }, [setParams, fetchOrders]);
@@ -259,8 +291,9 @@ const MyOrdersPage: React.FC = () => {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status: OrderStatus) => {
-        const config = getStatusConfig(status);
+      render: (_: OrderStatus, record: OrderItem) => {
+        const displayStatus = statusOverrides[record.orderId]?.status || record.status;
+        const config = getStatusConfig(displayStatus as OrderStatus | '已签收');
         return (
           <Tag color={config.color} style={{ color: config.textColor, border: 'none' }}>
             {config.text}
@@ -303,7 +336,8 @@ const MyOrdersPage: React.FC = () => {
 
   // 移动端卡片渲染
   const renderMobileItem = (item: OrderItem) => {
-    const config = getStatusConfig(item.status);
+    const displayStatus = statusOverrides[item.orderId]?.status || item.status;
+    const config = getStatusConfig(displayStatus as OrderStatus | '已签收');
     return (
       <List.Item>
         <Card className="w-full shadow-sm hover:shadow-md transition-shadow" styles={{ body: { padding: '16px' } }}>

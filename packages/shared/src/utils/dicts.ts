@@ -4,7 +4,6 @@ import type { OrderStatus, ShippingStatus } from '../types/index.js';
 export const orderStatusDict: Record<OrderStatus, string> = {
   PENDING: '待发货',
   SHIPPED: '运输中',
-  DELIVERED: '已送达',
   COMPLETED: '已完成',
   CANCELED: '已取消',
 };

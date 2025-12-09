@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router';
-import { ArrowLeft, Truck, MapPin } from 'lucide-react';
-import { Alert, Button } from 'antd';
-import { useEffect } from 'react';
+import { ArrowLeft, Truck, MapPin, CheckCircle, Clock } from 'lucide-react';
+import { Alert, Button, Modal, message, Statistic } from 'antd';
+import { useEffect, useState } from 'react';
 import { useOrderDetailStore } from '@/store/useOrderDetailStore';
 import ProductList from '@/commonpart/ProductList';
 import RecipientInfo from '@/commonpart/RecipientInfo';
@@ -14,13 +14,46 @@ const OrderDetailPage = () => {
   const navigate = useNavigate();
 
   // 使用订单详情 Store
-  const { order, loading, error, fetchOrderDetail } = useOrderDetailStore();
+  const { order, loading, error, fetchOrderDetail, confirmReceipt } = useOrderDetailStore();
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [countdown, setCountdown] = useState<number>(0);
 
   useEffect(() => {
     if (orderId) {
       fetchOrderDetail(orderId);
     }
   }, [orderId, fetchOrderDetail]);
+
+  // 处理倒计时
+  useEffect(() => {
+    if (order?.timestampToAutoConfirm) {
+      setCountdown(order.timestampToAutoConfirm);
+    }
+  }, [order?.timestampToAutoConfirm]);
+
+  // 确认收货处理
+  const handleConfirmReceipt = () => {
+    Modal.confirm({
+      title: '确认收货',
+      content: '您确认已收到商品吗？',
+      okText: '确认收货',
+      cancelText: '取消',
+      onOk: async () => {
+        if (!orderId) return;
+        setConfirmLoading(true);
+        try {
+          await confirmReceipt(orderId);
+          message.success('确认收货成功');
+          navigate('/client/orders');
+        } catch (err) {
+          // 错误已经在 store 中处理，这里只需停止 loading
+          message.error('确认收货失败，请稍后重试');
+        } finally {
+          setConfirmLoading(false);
+        }
+      },
+    });
+  };
 
   // 根据订单状态和发货状态确定当前位置
   const getCurrentLocation = (): [number, number] | undefined => {
@@ -49,11 +82,54 @@ const OrderDetailPage = () => {
             titleClass="text-sm md:text-3xl"
           />
 
-          {/* 返回到客户端订单列表 */}
-          <Button onClick={() => navigate('/client/orders')} color="primary">
-            <ArrowLeft size={18} />
-            <span>返回订单列表</span>
-          </Button>
+          <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-4">
+            {/* 自动收货倒计时 - 仅在运输中且有倒计时时间时显示 */}
+            {order?.status === '运输中' && countdown > Date.now() && (
+               <div className="flex items-center gap-1 text-xs text-orange-500 sm:text-sm">
+                 <Clock size={14} className="sm:w-4 sm:h-4" />
+                 <span>自动收货：</span>
+                 <Statistic.Countdown 
+                   value={countdown} 
+                   format="D 天 H 时 m 分" 
+                   valueStyle={{ fontSize: 'inherit', color: '#f97316', lineHeight: 'inherit' }}
+                   onFinish={() => {
+                     // 倒计时结束时的回调，可以刷新页面或重新获取状态
+                     if (orderId) fetchOrderDetail(orderId);
+                   }}
+                 />
+               </div>
+            )}
+
+            <div className="flex gap-2">
+            {/* 确认收货按钮 - 运输中可点击，已签收禁用显示 */}
+            {(order?.status === '运输中' || order?.status === '已签收') && (
+              <Button
+                type={order?.status === '运输中' ? 'primary' : 'default'}
+                onClick={handleConfirmReceipt}
+                disabled={order?.status === '已签收'}
+                loading={confirmLoading}
+                icon={<CheckCircle size={16} />}
+                size="small"
+                className="sm:h-8 sm:px-3 sm:text-sm"
+                style={{ height: '32px' }}
+              >
+                {order?.status === '已签收' ? '已签收' : '确认收货'}
+              </Button>
+            )}
+
+              {/* 返回到客户端订单列表 */}
+              <Button 
+                onClick={() => navigate('/client/orders')} 
+                color="primary"
+                size="small"
+                className="sm:h-8 sm:px-3 sm:text-sm"
+                style={{ height: '32px' }}
+              >
+                <ArrowLeft size={16} />
+                <span>返回</span>
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* 错误提示 */}
@@ -100,9 +176,7 @@ const OrderDetailPage = () => {
                       status={order.status}
                       currentLocation={getCurrentLocation()}
                       showControls={true}
-                      distance={order.distance}
-                      estimatedTime={order.estimatedTime}
-                      orderId={order.orderId}
+                      
                       showInfoCard={true}
                       showProgressIndicator={true}
                       className="h-full"
