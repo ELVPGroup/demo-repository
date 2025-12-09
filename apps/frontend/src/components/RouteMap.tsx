@@ -15,10 +15,10 @@ interface RouteMapProps {
   };
 
   status: string;
-  
+
   // 可选的当前车辆位置
   currentLocation?: [number, number];
-  
+
   // 可选的路线数据
   routeData?: {
     waypoints?: [number, number][];
@@ -35,11 +35,11 @@ interface RouteMapProps {
   showControls?: boolean;
   showInfoCard?: boolean;
   showProgressIndicator?: boolean;
-  
+
   // 可选的样式配置
   className?: string;
   style?: React.CSSProperties;
-  
+
   // 可选的回调函数
   onZoomChange?: (zoom: number) => void;
   onMapClick?: (coords: [number, number]) => void;
@@ -63,13 +63,13 @@ const RouteMap: React.FC<RouteMapProps> = ({
   onMapClick
 }) => {
   const [zoom, setZoom] = useState(1);
-  
+
   // 生成路线点的函数
   const generateWaypoints = (start: [number, number], end: [number, number], count: number = 4) => {
     const waypoints: [number, number][] = [];
     const [startLng, startLat] = start;
     const [endLng, endLat] = end;
-    
+
     for (let i = 1; i <= count; i++) {
       const ratio = i / (count + 1);
       const lng = startLng + (endLng - startLng) * ratio;
@@ -79,7 +79,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
       const offsetLat = (Math.random() - 0.5) * 0.02;
       waypoints.push([lng + offsetLng, lat + offsetLat]);
     }
-    
+
     return waypoints;
   };
 
@@ -87,9 +87,9 @@ const RouteMap: React.FC<RouteMapProps> = ({
   const [mapRouteData] = useState(() => {
     // 如果有传入的路线点，使用传入的；否则生成新的
     const waypoints = routeData.waypoints && routeData.waypoints.length > 0
-      ? routeData.waypoints
-      : generateWaypoints(startLocation.coords, endLocation.coords);
-    
+        ? routeData.waypoints
+        : generateWaypoints(startLocation.coords, endLocation.coords);
+
     return {
       from: startLocation.coords,
       to: endLocation.coords,
@@ -103,7 +103,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
   const defaultCurrentLocation = currentLocation || startLocation.coords;
 
   return (
-    <div 
+    <div
       className={`relative h-full w-full overflow-hidden bg-[#f0f0f0] ${className}`}
       style={style}
     >
