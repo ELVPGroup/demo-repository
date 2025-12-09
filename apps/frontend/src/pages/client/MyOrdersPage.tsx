@@ -23,7 +23,8 @@ const MyOrdersPage: React.FC = () => {
   const navigate = useNavigate();
 
   // 搜索相关状态
-  const [search, setSearch] = useState('');
+  const [searchText, setSearchText] = useState(''); // 输入框显示的值
+  const [searchQuery, setSearchQuery] = useState(''); // 实际触发搜索的值
 
   // 排序相关状态
   const [sortBy, setSortBy] = useState<'createdAt' | 'totalPrice'>('createdAt');
@@ -34,7 +35,7 @@ const MyOrdersPage: React.FC = () => {
   const [pageSize, setPageSize] = useState(20);
 
   // Store
-  const { orders, total, loading, setParams, fetchOrders } = useOrderStore();
+  const { orders, loading, setParams, fetchOrders } = useOrderStore();
 
   // 状态映射
   const getStatusConfig = (status: OrderStatus) => {
@@ -74,41 +75,129 @@ const MyOrdersPage: React.FC = () => {
 
   // 数据获取 Effect
   useEffect(() => {
+    // 获取全部数据，不传分页参数
     setParams({
-      orderId: search.trim() || undefined, // 使用 orderId 字段传递搜索关键词
-      limit: pageSize,
-      offset: (currentPage - 1) * pageSize,
-      sort: sortOrder,
-      sortBy: sortBy,
+      limit: undefined,
+      offset: undefined,
+      sort: undefined,
+      sortBy: undefined,
+      orderId: undefined, 
     });
     fetchOrders();
-  }, [search, pageSize, currentPage, sortOrder, sortBy, setParams, fetchOrders]);
+  }, [setParams, fetchOrders]);
+
+  // 前端处理数据：过滤 -> 排序
+  const processedData = React.useMemo(() => {
+    let data = [...orders];
+
+    // 1. 过滤
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase().trim();
+      data = data.filter((item) => {
+        const orderId = item.orderId.toLowerCase();
+        
+        // 场景 1: 完整匹配或部分匹配 (忽略大小写)
+        // 涵盖: 输入 "ORD-000030" -> 匹配 "ORD-000030"
+        // 涵盖: 输入 "ord-30" -> 匹配 "ORD-000030" (如果不严格匹配前缀)
+        if (orderId.includes(q)) return true;
+
+        // 场景 2: 纯数字输入匹配 (如 "30" 或 "000030")
+        // 我们尝试从订单号中提取数字部分进行对比
+        // 假设订单号格式为 "PREFIX-NUMBER" 或类似结构
+        const numericPart = orderId.replace(/\D/g, ''); // 提取 "000030"
+        const queryNumeric = q.replace(/\D/g, ''); // 提取查询中的数字 "30"
+
+        if (queryNumeric) {
+            // 如果提取出的数字部分匹配
+            // 比如订单数字是 000030 (30)，查询是 30
+            // 我们将两者都转为数字进行比较，或者检查字符串包含
+            // 这里为了支持 "000030" 匹配 "30"，我们检查数字值是否相等
+            // 或者检查字符串结尾是否匹配 (通常用户输后几位)
+            
+            // 策略 A: 转换为数字比较 (最精准，"000030" == "30")
+            const orderNum = parseInt(numericPart, 10);
+            const queryNum = parseInt(queryNumeric, 10);
+            if (!isNaN(orderNum) && !isNaN(queryNum) && orderNum === queryNum) {
+                return true;
+            }
+        }
+        
+        // 场景 3: 混合格式模糊匹配 (如 "ORD-30")
+        // 如果用户输入了前缀，但数字部分省略了0
+        // 我们可以尝试将用户输入的数字部分进行补零匹配，或者将订单号去零匹配
+        // 简单做法：如果用户输入包含非数字字符，且数字部分匹配
+        if (q.includes('-')) {
+             const [qPrefix, qNum] = q.split('-');
+             const [oPrefix, oNum] = orderId.split('-');
+             
+             if (qPrefix && oPrefix && qNum && oNum) {
+                 // 前缀包含匹配
+                 if (oPrefix.includes(qPrefix)) {
+                     // 数字部分转数字匹配
+                     if (parseInt(qNum, 10) === parseInt(oNum, 10)) {
+                         return true;
+                     }
+                 }
+             }
+        }
+
+        return false;
+      });
+    }
+
+    // 2. 排序
+    if (sortBy) {
+      data.sort((a, b) => {
+        let aValue: string | number = a[sortBy];
+        let bValue: string | number = b[sortBy];
+
+        // 特殊处理金额
+        if (sortBy === 'totalPrice') {
+            aValue = Number(aValue);
+            bValue = Number(bValue);
+        }
+        
+        // 特殊处理日期
+        if (sortBy === 'createdAt') {
+            aValue = new Date(aValue).getTime();
+            bValue = new Date(bValue).getTime();
+        }
+
+        if (aValue === bValue) return 0;
+        
+        const result = aValue > bValue ? 1 : -1;
+        return sortOrder === 'asc' ? result : -result;
+      });
+    }
+
+    return data;
+  }, [orders, searchQuery, sortBy, sortOrder]);
 
   // 处理搜索
   const handleSearch = (): void => {
+    setSearchQuery(searchText); // 仅在点击搜索或回车时更新 searchQuery
     setCurrentPage(1);
-    // useEffect 会自动触发 fetchOrders
   };
 
   // 处理重置/刷新
   const handleRefresh = (): void => {
-    setSearch('');
+    setSearchText('');
+    setSearchQuery('');
     setCurrentPage(1);
     setSortBy('createdAt');
     setSortOrder('desc');
-    // useEffect 会自动触发 fetchOrders
+    fetchOrders();
   };
 
   // 处理手动排序按钮点击
   const handleManualSort = (field: 'createdAt' | 'totalPrice') => {
     if (sortBy === field) {
-      // 如果当前已经是按该字段排序，则切换顺序
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
-      // 否则切换到该字段，默认降序
       setSortBy(field);
       setSortOrder('desc');
     }
+    setCurrentPage(1);
   };
 
   // 分页渲染
@@ -120,6 +209,22 @@ const MyOrdersPage: React.FC = () => {
       return <a>下一页</a>;
     }
     return originalElement;
+  };
+
+  // Ant Design ConfigProvider 需要在根组件配置才能完全生效
+  // 但对于 showQuickJumper 的文字，可以通过 locale 覆盖
+  const paginationLocale = {
+    jump_to: '前往',
+    jump_to_confirm: '确定',
+    page: '页',
+    items_per_page: '条/页',
+    prev_page: '上一页',
+    next_page: '下一页',
+    prev_5: '向前 5 页',
+    next_5: '向后 5 页',
+    prev_3: '向前 3 页',
+    next_3: '向后 3 页',
+    page_size: '页码',
   };
 
   // 表格列定义
@@ -181,10 +286,10 @@ const MyOrdersPage: React.FC = () => {
   // 表格变化处理（分页、排序）
   const handleTableChange: TableProps<OrderItem>['onChange'] = (pagination, _filters, sorter) => {
     // 处理分页
-    if (typeof pagination.current === 'number' && pagination.current !== currentPage) {
+    if (typeof pagination.current === 'number') {
       setCurrentPage(pagination.current);
     }
-    if (typeof pagination.pageSize === 'number' && pagination.pageSize !== pageSize) {
+    if (typeof pagination.pageSize === 'number') {
       setPageSize(pagination.pageSize);
     }
 
@@ -263,8 +368,8 @@ const MyOrdersPage: React.FC = () => {
               <Input
                 placeholder="搜索订单号..."
                 prefix={<SearchOutlined className="text-gray-400" />}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
                 onPressEnter={handleSearch}
                 className="w-full sm:w-64"
                 allowClear
@@ -322,16 +427,17 @@ const MyOrdersPage: React.FC = () => {
         <Card bordered={false} className="hidden shadow-sm md:block">
           <Table
             columns={columns}
-            dataSource={orders}
+            dataSource={processedData}
             rowKey="orderId"
             pagination={{
               current: currentPage,
               pageSize: pageSize,
-              total: total,
+              total: processedData.length,
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total) => `共 ${total} 条订单`,
               itemRender: itemRender,
+              locale: paginationLocale,
             }}
             loading={loading}
             onChange={handleTableChange}
@@ -344,7 +450,7 @@ const MyOrdersPage: React.FC = () => {
         {/* 订单列表 - 移动端 List */}
         <div className="md:hidden">
           <List
-            dataSource={orders}
+            dataSource={processedData}
             renderItem={renderMobileItem}
             loading={loading}
             locale={{
@@ -353,7 +459,7 @@ const MyOrdersPage: React.FC = () => {
             pagination={{
               current: currentPage,
               pageSize: pageSize,
-              total: total,
+              total: processedData.length,
               onChange: (page, size) => {
                 setCurrentPage(page);
                 setPageSize(size);
