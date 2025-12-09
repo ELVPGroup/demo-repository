@@ -16,6 +16,7 @@ datasource db {
 enum OrderStatus {
   PENDING // 待发货
   SHIPPED // 运输中
+  DELIVERED // 已送达
   COMPLETED // 已完成
   CANCELED // 已取消
 }

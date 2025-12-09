@@ -1,6 +1,6 @@
 export type GeoPoint = [number, number];
 
-export type OrderStatus = 'PENDING' | 'SHIPPED' | 'COMPLETED' | 'CANCELED';
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELED';
 
 export type ShippingStatus =
   | 'PENDING'

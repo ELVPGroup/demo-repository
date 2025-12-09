@@ -17,6 +17,12 @@ router.post('/list', authMiddleware, (ctx) => userOrderController.getOrderList(c
 router.post('/', authMiddleware, (ctx) => userOrderController.createOrder(ctx));
 
 /**
+ * POST /api/client/orders/confirm
+ * 确认收货
+ */
+router.post('/confirm', authMiddleware, (ctx) => userOrderController.confirmReceipt(ctx));
+
+/**
  * GET /api/client/orders/detail/{orderId}
  * 获取用户订单详情
  */

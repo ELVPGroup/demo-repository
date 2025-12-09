@@ -145,6 +145,35 @@ export class UserOrderController {
       ctx.body = { _message: error instanceof Error ? error.message : '创建订单失败' };
     }
   }
+
+  /**
+   * 客户端确认收货
+   */
+  async confirmReceipt(ctx: Context): Promise<void> {
+    try {
+      const userId = (extractRoleId(ctx.state['user']) as { userId: number }).userId;
+      const { orderId } = ctx.request.body as { orderId: string };
+
+      if (!orderId) {
+        ctx.status = 400;
+        ctx.body = { _message: '缺少订单ID' };
+        return;
+      }
+
+      const result = await orderService.confirmReceipt(userId, parseServiceId(orderId).id);
+
+      ctx.status = 200;
+      ctx.body = {
+        _data: result,
+        _message: '确认收货成功',
+      };
+    } catch (error) {
+      ctx.status = 400;
+      ctx.body = {
+        _message: error instanceof Error ? error.message : '确认收货失败',
+      };
+    }
+  }
 }
 
 export const userOrderController = new UserOrderController();

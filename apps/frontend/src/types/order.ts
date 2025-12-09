@@ -7,7 +7,7 @@ export interface OrderQueryParams {
   customerName?: string;
 }
 
-export type OrderStatus = '待发货' | '运输中' | '已完成';
+export type OrderStatus = '待发货' | '运输中' | '已送达' | '已完成';
 
 export interface OrderItem {
   orderId: string;
