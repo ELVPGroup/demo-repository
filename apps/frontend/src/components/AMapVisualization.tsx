@@ -15,6 +15,7 @@ interface AMapVisualizationProps {
   animateRoute?: boolean;
   animationDurationMs?: number;
   currentLocationOffsetX?: number;
+  onBoundsChange?: (northEast: { lat: number; lng: number }, southWest: { lat: number; lng: number }) => void;
 }
 
 // 配置高德地图安全密钥
@@ -83,9 +84,11 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   animateRoute = true,
   animationDurationMs = 30,
   currentLocationOffsetX = 6,
+  onBoundsChange,
 }) => {
   const ref = useRef<HTMLDivElement | null>(null);
   const amapRef = useRef<any>(null);
+  const boundsHandlerRef = useRef<((...args: any[]) => void) | null>(null);
   const movingMarkerRef = useRef<any>(null);
   const animationRef = useRef<any>(null);
   const currentLocationMarkerRef = useRef<any>(null);
@@ -99,6 +102,10 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
   const startRouteAnimation = (AMap: any, map: any, path: LngLat[], currentLocation?: LngLat) => {
     console.debug('startRouteAnimation called', { pathLength: path.length, animateRoute, currentLocation });
     // console.log('startRouteAnimation called', path);
+    // currentLocation = [
+    //             114.424376,
+    //             30.607375
+    //         ]; // for debug
     if (!path.length || !animateRoute) {
       console.debug('startRouteAnimation aborted: no path or animateRoute disabled');
       return;
@@ -129,7 +136,7 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
         }
       }
       endIndex = minIdx;
-      startIndex = Math.max(0, endIndex - 500); // 最多回溯500个点以加快动画
+      startIndex = Math.max(0, endIndex - 1000); // 最多回溯1000个点以加快动画
       console.debug('Determined endIndex for animation based on currentLocation:', startIndex, endIndex);
     }
 
@@ -248,46 +255,142 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
     return circle;
   };
 
-  // 绘制地址标记
+  // 绘制地址标记 - 修改版本
   const drawMarkers = (
     AMap: any,
     map: any,
     markers: Array<{ id: string; position: LngLat; color?: string }>
   ) => {
-    // console.debug('drawMarkers called, markers count:', markers?.length, 'first:', markers?.[0]);
+    console.debug('drawMarkers called, markers count:', markers?.length, 'first:', markers?.[0]);
     // 清除现有标记
     mapMarkersRef.current.forEach((marker) => {
       map.remove(marker);
     });
     mapMarkersRef.current = [];
 
-    markers.forEach((marker) => {
-      const markerColor = marker.color || '#3366FF';
-      const markerObj = new AMap.Marker({
-        position: marker.position,
-        title: marker.id,
-        icon: new AMap.Icon({
-          size: new AMap.Size(12, 12),
-          image: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"><circle cx="6" cy="6" r="5" fill="${markerColor}" stroke="white" stroke-width="1"/></svg>`,
-          imageSize: new AMap.Size(12, 12),
-        }),
-      });
+    // 统计每个位置的点数量
+    const positionCountMap = new Map<string, number>();
+    const positionOffsetMap = new Map<string, { offset: LngLat; index: number }>();
 
+    // 第一次遍历：统计每个位置的数量
+    markers.forEach((marker) => {
+      const key = `${marker.position[0].toFixed(6)}_${marker.position[1].toFixed(6)}`;
+      positionCountMap.set(key, (positionCountMap.get(key) || 0) + 1);
+    });
+
+    // 第二次遍历：绘制标记
+    markers.forEach((marker) => {
+      const key = `${marker.position[0].toFixed(6)}_${marker.position[1].toFixed(6)}`;
+      const count = positionCountMap.get(key) || 1;
+      
+      let finalPosition: LngLat;
+      
+      // 如果只有一个点，使用原位置
+      if (count === 1) {
+        finalPosition = marker.position;
+      } else {
+        // 如果有多个点，计算偏移位置
+        let offsetInfo = positionOffsetMap.get(key);
+        if (!offsetInfo) {
+          offsetInfo = { offset: [0, 0], index: 0 };
+          positionOffsetMap.set(key, offsetInfo);
+        }
+        
+        // 计算偏移（使用环形布局）
+        const angle = (offsetInfo.index / count) * 2 * Math.PI;
+        const radius = 0.00015; // 偏移半径（约15米）
+        
+        const offsetX = Math.cos(angle) * radius;
+        const offsetY = Math.sin(angle) * radius;
+        
+        finalPosition = [
+          marker.position[0] + offsetX,
+          marker.position[1] + offsetY
+        ];
+        
+        offsetInfo.index++;
+      }
+
+      const markerColor = marker.color || '#3366FF';
+      
+      // 创建标记
+      const markerObj = new AMap.Marker({
+        position: finalPosition,
+        title: `${marker.id} (${count > 1 ? '共' + count + '个点' : ''})`,
+        zIndex: 100 + (count > 1 ? 1 : 0), // 重叠点显示在最上层
+        icon: new AMap.Icon({
+          size: new AMap.Size(count > 1 ? 14 : 12, count > 1 ? 14 : 12),
+          image: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="${count > 1 ? 14 : 12}" height="${count > 1 ? 14 : 12}">
+            <circle cx="${count > 1 ? 7 : 6}" cy="${count > 1 ? 7 : 6}" r="${count > 1 ? 6 : 5}" 
+              fill="${markerColor}" stroke="white" stroke-width="${count > 1 ? '2' : '1'}"/>
+            ${count > 1 ? `<text x="7" y="9" font-size="6" fill="white" text-anchor="middle" font-weight="bold">${count}</text>` : ''}
+          </svg>`,
+          imageSize: new AMap.Size(count > 1 ? 14 : 12, count > 1 ? 14 : 12),
+        }),
+        // 添加自定义数据
+        extData: {
+          originalPosition: marker.position,
+          isCluster: count > 1,
+          count: count
+        }
+      });
+      // console.debug('Adding marker:', markerObj);
       // 添加点击事件
-      markerObj.on('click', () => {
-        const infoWindow = new AMap.InfoWindow({
-          content: `
-            <div style="padding: 8px;">
-              <div style="font-weight: bold; margin-bottom: 4px;">${marker.id}</div>
-              <div style="font-size: 12px; color: #666;">
-                经度: ${marker.position[0].toFixed(6)}<br/>
-                纬度: ${marker.position[1].toFixed(6)}
-              </div>
+      markerObj.on('click', (e: any) => {
+        const targetMarker = e.target;
+        const extData = targetMarker.getExtData();
+        
+        let content = `
+          <div style="padding: 8px; max-width: 250px;">
+            <div style="font-weight: bold; margin-bottom: 4px;">${marker.id}</div>
+        `;
+        
+        if (extData.isCluster) {
+          // 如果是聚合点，显示所有订单
+          const clusterMarkers = markers.filter(m => 
+            `${m.position[0].toFixed(6)}_${m.position[1].toFixed(6)}` === key
+          );
+          
+          content += `
+            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
+              该位置有 ${extData.count} 个订单：
             </div>
-          `,
-          offset: new AMap.Pixel(0, -10),
+            <div style="max-height: 200px; overflow-y: auto;">
+          `;
+          
+          clusterMarkers.forEach((m, index) => {
+            content += `
+              <div style="padding: 4px; border-bottom: 1px solid #eee;">
+                <div style="font-size: 11px;">
+                  <strong>订单 ${index + 1}:</strong> ${m.id}
+                </div>
+                <div style="font-size: 10px; color: #888;">
+                  经度: ${m.position[0].toFixed(6)}<br/>
+                  纬度: ${m.position[1].toFixed(6)}
+                </div>
+              </div>
+            `;
+          });
+          
+          content += `</div>`;
+        } else {
+          // 单个点
+          content += `
+            <div style="font-size: 12px; color: #666;">
+              经度: ${marker.position[0].toFixed(6)}<br/>
+              纬度: ${marker.position[1].toFixed(6)}
+            </div>
+          `;
+        }
+        
+        content += `</div>`;
+
+        const infoWindow = new AMap.InfoWindow({
+          content: content,
+          offset: new AMap.Pixel(0, -20),
         });
-        infoWindow.open(map, marker.position);
+        
+        infoWindow.open(map, finalPosition);
       });
 
       markerObj.setMap(map);
@@ -487,6 +590,29 @@ const AMapVisualization: React.FC<AMapVisualizationProps> = ({
                 map.setFitView();
               }, 500);
             }
+
+            // 绑定视口变化回调，向父组件报告 NE/SW
+            const emitBounds = () => {
+              try {
+                const bounds = map.getBounds();
+                if (!bounds) return;
+                const ne = bounds.getNorthEast();
+                const sw = bounds.getSouthWest();
+                if (onBoundsChange) {
+                  onBoundsChange({ lat: ne.lat, lng: ne.lng }, { lat: sw.lat, lng: sw.lng });
+                }
+              } catch (e) {
+                // ignore
+              }
+            };
+
+            boundsHandlerRef.current = emitBounds;
+            map.on('moveend', emitBounds);
+            map.on('zoomend', emitBounds);
+            map.on('dragend', emitBounds);
+
+            // 触发一次初始边界回调
+            emitBounds();
           } catch (error) {
             console.error('地图初始化错误:', error);
           }
