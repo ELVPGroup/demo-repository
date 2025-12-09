@@ -313,7 +313,7 @@ const MyOrdersPage: React.FC = () => {
               {config.text}
             </Tag>
           </div>
-          
+
           <div className="space-y-2 text-sm text-gray-500">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -334,19 +334,21 @@ const MyOrdersPage: React.FC = () => {
                 <DollarOutlined />
                 <span>订单金额</span>
               </div>
-              <span className="text-base font-medium text-red-500">¥{Number(item.totalPrice).toFixed(2)}</span>
+              <span className="text-base font-medium text-red-500">
+                ¥{Number(item.totalPrice).toFixed(2)}
+              </span>
             </div>
           </div>
 
           <div className="mt-4 flex justify-end pt-2">
-             <Button
-                type="primary"
-                ghost
-                size="small"
-                onClick={() => navigate(`/client/orders/${item.orderId}`)}
-              >
-                查看详情
-              </Button>
+            <Button
+              type="primary"
+              ghost
+              size="small"
+              onClick={() => navigate(`/client/orders/${item.orderId}`)}
+            >
+              查看详情
+            </Button>
           </div>
         </Card>
       </List.Item>

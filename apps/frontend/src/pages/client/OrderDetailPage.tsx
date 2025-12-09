@@ -102,6 +102,7 @@ const OrderDetailPage = () => {
                       showControls={true}
                       distance={order.distance}
                       estimatedTime={order.estimatedTime}
+                      orderId={order.orderId}
                       showInfoCard={true}
                       showProgressIndicator={true}
                       className="h-full"

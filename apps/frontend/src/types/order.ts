@@ -15,7 +15,7 @@ export interface OrderItem {
   userId: string;
   userName: string;
   status: OrderStatus;
-  amount: number;
+  amount: number; // 订单商品总数量
   createdAt: string;
   totalPrice: number;
 }

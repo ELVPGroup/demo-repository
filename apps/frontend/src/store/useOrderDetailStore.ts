@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { merchantAxiosInstance, clientAxiosInstance } from '../utils/axios';
-import { useUserStore } from "./userStore";
+import { useUserStore } from './userStore';
 
 // 引入接口类型
 import type { OrderDetailResponse, OrderDetail } from '../types/orderDetailInterface';
@@ -23,7 +23,6 @@ export interface ShipOrderParams {
   logisticsId: string;
 }
 
-
 export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
   order: null,
   loading: false,
@@ -36,7 +35,7 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
     try {
       const { side } = useUserStore.getState();
       const axiosInstance = side === 'client' ? clientAxiosInstance : merchantAxiosInstance;
-      
+
       const res = await axiosInstance.get<OrderDetailResponse>(`/orders/detail/${orderId}`);
       const data = res.data.data;
       const defaultAddr = {
@@ -48,12 +47,8 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
       };
       const normalized = {
         ...(data as OrderDetail),
-        shippingFrom:
-          (data['shippingFrom'] as OrderDetail['shippingFrom']) ??
-          defaultAddr,
-        shippingTo:
-          (data['shippingTo'] as OrderDetail['shippingTo']) ??
-          defaultAddr,
+        shippingFrom: (data['shippingFrom'] as OrderDetail['shippingFrom']) ?? defaultAddr,
+        shippingTo: (data['shippingTo'] as OrderDetail['shippingTo']) ?? defaultAddr,
       } as OrderDetail;
 
       set({
@@ -71,11 +66,28 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
 
   //更新订单信息
   updateOrder: async (order: OrderDetail) => {
-    set({ loading: true, error: null, order });
+    set({ loading: true, error: null });
 
     try {
-      await merchantAxiosInstance.put<OrderDetailResponse>(`/orders/${order.orderId}`, order);
+      const res = await merchantAxiosInstance.put<OrderDetailResponse>(
+        `/orders/${order.orderId}`,
+        order
+      );
+      const data = res.data.data;
+      const defaultAddr = {
+        addressInfoId: '',
+        name: '',
+        phone: '',
+        address: '',
+      };
+      const normalized = {
+        ...(data as OrderDetail),
+        shippingFrom: (data['shippingFrom'] as OrderDetail['shippingFrom']) ?? defaultAddr,
+        shippingTo: (data['shippingTo'] as OrderDetail['shippingTo']) ?? defaultAddr,
+      } as OrderDetail;
+
       set({
+        order: normalized,
         loading: false,
       });
     } catch (err) {
@@ -92,10 +104,12 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
     set({ loading: true, error: null });
 
     try {
-      await merchantAxiosInstance.post("/shipping/send", params);
+      await merchantAxiosInstance.post('/shipping/send', params);
 
       // 发货成功后重新获取订单详情
-      const res = await merchantAxiosInstance.get<OrderDetailResponse>(`/orders/detail/${params.orderId}`);
+      const res = await merchantAxiosInstance.get<OrderDetailResponse>(
+        `/orders/detail/${params.orderId}`
+      );
       const data = res.data.data;
       const defaultAddr = {
         addressInfoId: '',
@@ -106,12 +120,8 @@ export const useOrderDetailStore = create<OrderDetailStore>((set) => ({
       };
       const normalized = {
         ...(data as OrderDetail),
-        shippingFrom:
-          (data['shippingFrom'] as OrderDetail['shippingFrom']) ??
-          defaultAddr,
-        shippingTo:
-          (data['shippingTo'] as OrderDetail['shippingTo']) ??
-          defaultAddr,
+        shippingFrom: (data['shippingFrom'] as OrderDetail['shippingFrom']) ?? defaultAddr,
+        shippingTo: (data['shippingTo'] as OrderDetail['shippingTo']) ?? defaultAddr,
       } as OrderDetail;
 
       set({
