@@ -745,6 +745,76 @@ export class OrderService {
 
     return this.getOrderDetail(orderId);
   }
+
+  /**
+   * 自动确认收货逻辑
+   * 查找发货超过10天的订单并自动完成
+   */
+  async autoConfirmOrders() {
+    const tenDaysAgo = dayjs().subtract(10, 'day').toDate();
+    console.log(`[AutoConfirm] Checking orders shipped before ${tenDaysAgo.toISOString()}`);
+
+    // 查找所有可能需要自动确认的订单
+    // 条件：状态为 SHIPPED，且存在 shippingStatus=SHIPPED 的时间轴记录早于 10 天前
+    const shippedTimelineItems = await prisma.timelineItem.findMany({
+      where: {
+        shippingStatus: 'SHIPPED',
+        time: { lt: tenDaysAgo },
+      },
+      select: { orderDetail: { select: { orderId: true } } },
+    });
+
+    const candidateOrderIds = [
+      ...new Set(shippedTimelineItems.map((item) => item.orderDetail.orderId)),
+    ];
+
+    if (candidateOrderIds.length === 0) {
+      return 0;
+    }
+
+    // 在这些候选订单中，筛选出当前状态仍为 SHIPPED 的订单
+    const ordersToConfirm = await prisma.order.findMany({
+      where: {
+        orderId: { in: candidateOrderIds },
+        status: 'SHIPPED',
+      },
+      select: { orderId: true },
+    });
+
+    const targetOrderIds = ordersToConfirm.map((o) => o.orderId);
+    console.log(`[AutoConfirm] Found ${targetOrderIds.length} orders to confirm:`, targetOrderIds);
+
+    if (targetOrderIds.length === 0) {
+      return 0;
+    }
+
+    // 批量更新状态
+    let count = 0;
+    // 使用事务逐个更新，确保每个订单都有对应的时间轴记录
+    for (const orderId of targetOrderIds) {
+      try {
+        await prisma.$transaction(async (tx) => {
+          await tx.order.update({
+            where: { orderId },
+            data: { status: 'COMPLETED' },
+          });
+
+          await tx.timelineItem.create({
+            data: {
+              orderDetail: { connect: { orderId } },
+              shippingStatus: 'DELIVERED', // 视为已送达/已完成
+              description: '超时自动确认收货，订单已完成',
+            },
+          });
+        });
+        count++;
+      } catch (error) {
+        console.error(`[AutoConfirm] Failed to confirm order ${orderId}:`, error);
+      }
+    }
+
+    return count;
+  }
 }
 
 export const orderService = new OrderService();

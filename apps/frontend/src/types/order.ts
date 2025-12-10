@@ -10,6 +10,7 @@ export interface OrderQueryParams {
 export type OrderStatus = '待发货' | '运输中' | '已送达' | '已完成';
 
 export interface OrderItem {
+  location: [number, number];
   orderId: string;
   merchantId: string;
   userId: string;
@@ -26,4 +27,5 @@ export interface OrderListResponse {
   status: number;
   message: string;
   data: OrderItem[];
+  total: number;
 }

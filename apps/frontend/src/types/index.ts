@@ -44,6 +44,7 @@ export interface TrackingStep {
   description: string;
   completed: boolean;
   currentLocation: boolean;
+  current: boolean;
 }
 
 export interface PackageData {

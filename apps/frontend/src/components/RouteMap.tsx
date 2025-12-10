@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AMapVisualization from './AMapVisualization';
-import { Plus, Minus } from 'lucide-react';
 
 // 定义组件的 Props 类型
 interface RouteMapProps {
@@ -28,9 +27,9 @@ interface RouteMapProps {
 
   // 可选的距离和预计时间
   distance?: number;
-  estimatedTime?: number;
+  estimatedTime?: string;
   orderId?: string;
-  
+
   // 可选的UI配置
   showControls?: boolean;
   showInfoCard?: boolean;
@@ -54,15 +53,15 @@ const RouteMap: React.FC<RouteMapProps> = ({
   estimatedTime,
   routeData = {},
   orderId,
-  showControls = true,
+  // showControls = true,
   showInfoCard = true,
   showProgressIndicator = true,
   className = '',
   style = {},
-  onZoomChange,
-  onMapClick
+  // onZoomChange,
+  onMapClick,
 }) => {
-  const [zoom, setZoom] = useState(1);
+  // const [zoom, setZoom] = useState(1);
 
   // 生成路线点的函数
   const generateWaypoints = (start: [number, number], end: [number, number], count: number = 4) => {
@@ -86,7 +85,8 @@ const RouteMap: React.FC<RouteMapProps> = ({
   // 直接在useState初始化函数中计算路线数据
   const [mapRouteData] = useState(() => {
     // 如果有传入的路线点，使用传入的；否则生成新的
-    const waypoints = routeData.waypoints && routeData.waypoints.length > 0
+    const waypoints =
+      routeData.waypoints && routeData.waypoints.length > 0
         ? routeData.waypoints
         : generateWaypoints(startLocation.coords, endLocation.coords);
 
@@ -137,9 +137,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">距离:</span>
-              <span className="font-medium">
-                {(Number(distance) || 0).toFixed(2)} km
-              </span>
+              <span className="font-medium">{(Number(distance) || 0).toFixed(2)} km</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">预计时间:</span>
@@ -149,13 +147,13 @@ const RouteMap: React.FC<RouteMapProps> = ({
 
           {/* 进度条 */}
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
-            <div 
+            <div
               className={`h-full animate-pulse rounded-full bg-blue-600 ${
-                (Number(distance) || 0) > 1000 
-                  ? 'w-1/20'      // 需要自定义或在 tailwind.config.js 中配置
+                (Number(distance) || 0) > 1000
+                  ? 'w-1/20' // 需要自定义或在 tailwind.config.js 中配置
                   : (Number(distance) || 0) < 100
-                    ? 'w-full'    // 100%
-                    : 'w-1/2'     // 50%
+                    ? 'w-full' // 100%
+                    : 'w-1/2' // 50%
               }`}
             ></div>
           </div>
