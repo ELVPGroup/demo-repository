@@ -3,7 +3,7 @@ import { MOCK_PROVIDERS } from '../constants';
 import { type Order, OrderStatus, type DashboardStats } from '../types';
 import AMapVisualization from './AMapVisualization';
 import { calculateDistance } from '../utils/locationUtils';
-import { CheckCircle2, Navigation, MapPin, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, Navigation, MapPin, Loader2, AlertCircle, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useDeliveryAreaStore } from '@/store/useDeliveryArea';
 import { useMapOrderStore } from '@/store/useMapOrderStore';
 import { message } from 'antd';
@@ -49,6 +49,11 @@ const MerchantDashboard: React.FC = () => {
 
   // 转换后的订单状态
   const [orders, setOrders] = useState<Order[]>([]);
+
+  // 返回上一页的处理函数
+  const handleGoBack = () => {
+    window.history.back(); // 使用浏览器历史记录返回 
+  };
 
   // 初始化：获取配送区域信息
   useEffect(() => {
@@ -340,6 +345,14 @@ const MerchantDashboard: React.FC = () => {
         <div className="border-b border-gray-100 bg-blue-600 p-6 text-white">
           <div className="mb-1 flex items-center justify-between">
             <div className="flex items-center gap-2">
+              {/* 添加返回按钮 */}
+              <button
+                onClick={handleGoBack}
+                className="mr-2 flex items-center justify-center rounded-full p-1 hover:bg-white/20"
+                title="返回上一页"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
               <Navigation className="h-6 w-6" />
               <h1 className="text-xl font-bold">商家配送管理</h1>
             </div>

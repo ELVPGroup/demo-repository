@@ -100,7 +100,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
   });
 
   // 如果没有传入当前位置，使用起点
-  const defaultCurrentLocation = currentLocation || startLocation.coords;
+  const defaultCurrentLocation = currentLocation || endLocation.coords;
 
   return (
     <div
@@ -181,7 +181,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
       )} */}
 
       {/* 可选的路线进度指示器 */}
-      {showProgressIndicator && (
+      {/* {showProgressIndicator && (
         <div className="absolute bottom-4 left-4 rounded-lg border border-gray-200 bg-white p-3 shadow-md">
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-center">
@@ -197,7 +197,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

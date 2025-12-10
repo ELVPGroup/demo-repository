@@ -60,8 +60,8 @@ const OrderDetailPage = () => {
     if (!order) return undefined;
 
     // 如果订单已送达，使用收货地址作为当前位置
-    if (order.status === '已签收' || order.status === 'delivered') {
-      return order.shippingTo?.location;
+    if (order.status === '已签收' || order.status === '已完成') {
+      return order.shippingTo?.location;    
     }
 
     // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
@@ -176,7 +176,9 @@ const OrderDetailPage = () => {
                       status={order.status}
                       currentLocation={getCurrentLocation()}
                       showControls={true}
-                      
+                      distance={order.distance}
+                      estimatedTime={order.estimatedTime}
+                      orderId={order.orderId}
                       showInfoCard={true}
                       showProgressIndicator={true}
                       className="h-full"

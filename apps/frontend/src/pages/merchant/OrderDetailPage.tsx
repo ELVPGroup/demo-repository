@@ -173,7 +173,7 @@ const OrderDetailPage = () => {
     if (!order) return undefined;
 
     // 如果订单已送达，使用收货地址作为当前位置
-    if (order.status === '已签收' || order.status === 'delivered') {
+    if (order.status === '已签收' || order.status === '已完成') {
       return order.shippingTo?.location;
     }
 
