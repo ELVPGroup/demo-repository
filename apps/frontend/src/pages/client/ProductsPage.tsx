@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Pagination } from 'antd';
 import ProductGrid from '../../components/clientComponents/product/ProductGrid';
@@ -16,7 +16,7 @@ function ProductsPage() {
   const { syncCartWithProducts } = useCartStore();
   const { searchQuery } = useSearchStore();
 
-  const totalItems = useMemo(() => products.length, [products]);
+  const totalItems = useRef(10);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -28,6 +28,7 @@ function ProductsPage() {
         productName: searchQuery,
       });
       const list = (res.data?.data || []) as ClientProduct[];
+      totalItems.current = res.data?.total || 10;
       setProducts(list);
       // 同步更新购物车中的商品状态
       syncCartWithProducts(list);
@@ -72,7 +73,7 @@ function ProductsPage() {
                 setPage(p);
                 setPageSize(s);
               }}
-              total={totalItems}
+              total={totalItems.current}
             />
           </div>
         </div>
