@@ -706,7 +706,7 @@ const OrderDetailPage = () => {
                       showControls={true}
                       showInfoCard={true}
                       distance={order.distance}
-                      estimatedTime={order.estimatedTime ? Number(order.estimatedTime) : undefined}
+                      estimatedTime={order.estimatedTime ? String(order.estimatedTime) : undefined}
                       orderId={order.orderId}
                       showProgressIndicator={true}
                       className="h-full"

@@ -55,7 +55,8 @@ const RouteMap: React.FC<RouteMapProps> = ({
   orderId,
   // showControls = true,
   showInfoCard = true,
-  showProgressIndicator = true,
+  // 保留字段以兼容调用方，但当前未启用进度指示器
+  // showProgressIndicator = true,
   className = '',
   style = {},
   // onZoomChange,
