@@ -2,7 +2,7 @@ import React from 'react';
 import { Select, Button } from 'antd';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 
-type Status = '全部' | '待发货' | '运输中' | '已完成';
+type Status = '全部' | '待发货' | '运输中' | '已送达' | '已完成';
 type SortBy = 'createdAt' | 'amount' | 'id';
 type SortOrder = 'asc' | 'desc';
 
@@ -51,7 +51,7 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
       {/* 右侧：状态筛选 */}
       <div className="flex items-center gap-4">
         <span className="text-sm text-gray-600">按状态筛选：</span>
-        {(['全部', '待发货', '运输中', '已完成'] as Status[]).map((s) => (
+        {(['全部', '待发货', '运输中', '已送达', '已完成'] as Status[]).map((s) => (
           <button
             key={s}
             className={`rounded-lg px-4 py-2 transition-colors ${

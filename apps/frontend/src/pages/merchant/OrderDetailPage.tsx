@@ -123,7 +123,7 @@ const OrderDetailPage = () => {
         const products = await fetchMerchantProducts();
         if (!mounted) return;
 
-        form.setFieldsValue({
+      form.setFieldsValue({
           products:
             order.products?.map((p) => {
               const merchantProduct = products.find((mp) => mp.productId === p.productId);
@@ -155,7 +155,7 @@ const OrderDetailPage = () => {
         const currentValue = shipForm.getFieldValue('logisticsId');
         const firstProvider = logisticsProviderList[0];
         const firstId = String(firstProvider.logisticsId); // 使用 logisticsId 而不是 id
-
+        
         // 如果当前没有值，则设置为第一个供应商
         if (!currentValue) {
           shipForm.setFieldsValue({ logisticsId: firstId });
@@ -172,13 +172,13 @@ const OrderDetailPage = () => {
   const getCurrentLocation = (): [number, number] | undefined => {
     if (!order) return undefined;
 
-    // 如果订单已送达，使用收货地址作为当前位置
-    if (order.status === '已签收' || order.status === '已完成') {
+    // 如果订单已送达或已完成，使用收货地址作为当前位置
+    if (order.status === '已送达' || order.status === '已完成') {
       return order.shippingTo?.location;
     }
 
-    // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
-    if (order.status === '运输中' || order.status === '已发货') {
+    // 如果订单已发货但未送达，使用发货地址作为起点
+    if (order.status === '运输中') {
       return order.shippingFrom?.location;
     }
 
@@ -215,14 +215,14 @@ const OrderDetailPage = () => {
   const handleOpenShipModal = async () => {
     setShipModalVisible(true);
     shipForm.resetFields();
-
+  
     try {
       await getLogisticsProviderList(); // 加载供应商列表
-
+      
       // 获取最新的供应商列表
       const list = useShippingStore.getState().logisticsProviderList;
       console.log('供应商列表:', list);
-
+  
       if (list.length === 0) {
         message.warning('暂无物流供应商，请添加后再发货');
       }
@@ -230,10 +230,10 @@ const OrderDetailPage = () => {
     } catch (err: unknown) {
       const errorMessage =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : err instanceof Error
-            ? err.message
-            : '获取供应商失败';
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : err instanceof Error
+          ? err.message
+          : '获取供应商失败';
       message.error(errorMessage);
     }
   };
@@ -251,7 +251,7 @@ const OrderDetailPage = () => {
     try {
       // 验证表单并获取值
       const values = await shipForm.validateFields();
-
+      
       if (!values.logisticsId) {
         message.error('请选择物流供应商');
         return;
@@ -273,10 +273,10 @@ const OrderDetailPage = () => {
       }
       const errorMessage =
         err && typeof err === 'object' && 'response' in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : err instanceof Error
-            ? err.message
-            : '发货失败，请重试';
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : err instanceof Error
+          ? err.message
+          : '发货失败，请重试';
       message.error(errorMessage);
     }
   };
@@ -284,7 +284,7 @@ const OrderDetailPage = () => {
   // 判断是否可以发货（待处理或已确认状态）
   const canShip = order && order.shippingStatus === '待发货';
   // 判断是否可以编辑（只有待发货状态可以编辑）
-  const canEdit = order && (order.status === '待发货' || order.status === 'PENDING');
+  const canEdit = order && order.status === '待发货';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -316,11 +316,11 @@ const OrderDetailPage = () => {
               notFoundContent={loading ? '加载中...' : '暂无物流供应商'}
               options={
                 logisticsProviderList?.map((p) => {
-                  const id = String(p.logisticsId); // 使用 logisticsId 而不是 id
-                  return {
-                    label: p.name,
-                    value: id,
-                  };
+                const id = String(p.logisticsId); // 使用 logisticsId 而不是 id
+                return {
+                  label: p.name,
+                  value: id,
+                };
                 }) || []
               }
             />
@@ -523,13 +523,13 @@ const OrderDetailPage = () => {
               </>
             ) : (
               <Tooltip title={!canEdit ? '当前订单状态不可编辑' : ''}>
-                <Button
-                  type="primary"
+            <Button
+              type="primary"
                   onClick={() => setIsEditing(true)}
                   disabled={!canEdit || loading}
-                >
-                  编辑订单
-                </Button>
+            >
+              编辑订单
+            </Button>
               </Tooltip>
             )}
 
@@ -653,14 +653,14 @@ const OrderDetailPage = () => {
                             )}
 
                             {/* 商品信息 */}
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900">{product.name}</div>
-                              {product.description && (
-                                <div className="mt-1 text-sm text-gray-500">
-                                  {product.description}
-                                </div>
-                              )}
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{product.name}</div>
+                            {product.description && (
                               <div className="mt-1 text-sm text-gray-500">
+                                {product.description}
+                              </div>
+                            )}
+                            <div className="mt-1 text-sm text-gray-500">
                                 数量：x{product.quantity}
                               </div>
                             </div>
@@ -706,7 +706,7 @@ const OrderDetailPage = () => {
                       showControls={true}
                       showInfoCard={true}
                       distance={order.distance}
-                      estimatedTime={order.estimatedTime}
+                      estimatedTime={order.estimatedTime ? Number(order.estimatedTime) : undefined}
                       orderId={order.orderId}
                       showProgressIndicator={true}
                       className="h-full"
@@ -748,12 +748,12 @@ const OrderDetailPage = () => {
                 <div className="mt-4 text-sm text-gray-500">
                   {order.status === '待发货'
                     ? '等待发货'
-                    : order.status === '已揽收'
-                      ? '包裹已发出，正在运输中'
                       : order.status === '运输中'
                         ? '包裹正在运输途中'
-                        : order.status === '已签收'
+                      : order.status === '已送达'
                           ? '包裹已送达'
+                        : order.status === '已完成'
+                          ? '订单已完成'
                           : '配送状态未知'}
                 </div>
               </div>

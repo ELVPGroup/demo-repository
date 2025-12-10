@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import type { OrderItem } from '@/types/order';
 import { orderStatusColors } from '@/theme/theme';
 import { Button } from 'antd';
+import { normalizeOrderStatus } from '@/utils/general';
 
 interface OrderCardProps {
   order: OrderItem;
@@ -15,7 +16,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
   const handleDetailClick = () => {
     navigate(`/merchant/orders/${order.orderId}`);
   };
-  const buttonStyle = orderStatusColors[order?.status as keyof typeof orderStatusColors]|| orderStatusColors.default;
+  
+  // 标准化订单状态，将"已签收"等状态统一为"已送达"
+  const normalizedStatus = normalizeOrderStatus(order?.status || '');
+  const buttonStyle = orderStatusColors[normalizedStatus as keyof typeof orderStatusColors] || orderStatusColors.default;
 
   return (
     <div className="flex flex-col justify-between rounded-2xl bg-blue-50 p-4 shadow-sm">
@@ -29,7 +33,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({ order }) => {
             border: buttonStyle.border,
         }}
         >
-          {order.status}
+          {normalizedStatus}
         </span>
       </div>
 

@@ -85,3 +85,42 @@ export function throttled<T extends (...args: unknown[]) => unknown>(func: T, de
 
   return throttledFn as T & { cancel: () => void };
 }
+
+/**
+ * 标准化订单状态，将各种可能的状态值统一映射到标准状态
+ * @param status 原始状态值
+ * @returns 标准化后的状态值
+ */
+export function normalizeOrderStatus(status: string): '待发货' | '运输中' | '已送达' | '已完成' {
+  const statusLower = status.toLowerCase();
+  
+  // 待发货
+  if (status === '待发货' || statusLower === 'pending') {
+    return '待发货';
+  }
+  
+  // 运输中
+  if (status === '运输中' || statusLower === 'shipped' || status === '已发货' || status === '已揽收') {
+    return '运输中';
+  }
+  
+  // 已送达 - 包含已签收状态
+  if (
+    status === '已送达' || 
+    status === '已签收' ||
+    statusLower === 'delivered' || 
+    statusLower.includes('已送达') ||
+    statusLower.includes('已签收') ||
+    status === 'DELIVERED'
+  ) {
+    return '已送达';
+  }
+  
+  // 已完成
+  if (status === '已完成' || statusLower === 'completed') {
+    return '已完成';
+  }
+  
+  // 默认返回待发货
+  return '待发货';
+}

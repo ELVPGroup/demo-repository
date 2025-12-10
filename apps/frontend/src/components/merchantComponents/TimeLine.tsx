@@ -26,7 +26,13 @@ const getStatusConfig = (status: string) => {
       colors: orderStatusColors['运输中'] || orderStatusColors.default,
     };
   }
-  if (status === '已完成' || statusLower.includes('completed') || statusLower.includes('已完成') || statusLower.includes('已签收') || statusLower.includes('delivered')) {
+  if (status === '已送达' || statusLower.includes('delivered') || statusLower.includes('已送达') || statusLower.includes('已签收') || status === '已签收') {
+    return {
+      icon: MapPin,
+      colors: orderStatusColors['已送达'] || orderStatusColors.default,
+    };
+  }
+  if (status === '已完成' || statusLower.includes('completed') || statusLower.includes('已完成')) {
     return {
       icon: CheckCircle,
       colors: orderStatusColors['已完成'] || orderStatusColors.default,

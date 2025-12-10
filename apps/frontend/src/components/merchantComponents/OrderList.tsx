@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router';
 import { useOrderStore } from '@/store/useOrderStore';
 import type { OrderItem } from '@/types/order';
 import { orderStatusColors } from '@/theme/theme';
+import { normalizeOrderStatus } from '@/utils/general';
 
 const OrderList: React.FC = () => {
   const { orders } = useOrderStore();
@@ -45,8 +46,10 @@ const OrderList: React.FC = () => {
       key: 'status',
       width: 120,
       render: (status: string) => {
+        // 标准化订单状态，将"已签收"等状态统一为"已送达"
+        const normalizedStatus = normalizeOrderStatus(status);
         const buttonStyle =
-          orderStatusColors[status as keyof typeof orderStatusColors] ||
+          orderStatusColors[normalizedStatus as keyof typeof orderStatusColors] ||
           orderStatusColors.default;
         return (
           <Tag
@@ -60,7 +63,7 @@ const OrderList: React.FC = () => {
               fontWeight: 600,
             }}
           >
-            {status}
+            {normalizedStatus}
           </Tag>
         );
       },

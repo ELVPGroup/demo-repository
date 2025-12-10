@@ -11,13 +11,14 @@ import { useDebounce } from '@/hooks/useDebounce';
 const ITEMS_PER_PAGE = 9;
 
 // 将中文状态映射到后端期望的英文状态
-const mapStatusToApi = (status: '全部' | '待发货' | '运输中' | '已完成'): string | undefined => {
+const mapStatusToApi = (status: '全部' | '待发货' | '运输中' | '已送达' | '已完成'): string | undefined => {
   if (status === '全部') {
     return undefined;
   }
-  const statusMap: Record<'待发货' | '运输中' | '已完成', string> = {
+  const statusMap: Record<'待发货' | '运输中' | '已送达' | '已完成', string> = {
     '待发货': 'PENDING',
     '运输中': 'SHIPPED',
+    '已送达': 'DELIVERED',
     '已完成': 'COMPLETED',
   };
   return statusMap[status];
@@ -25,7 +26,7 @@ const mapStatusToApi = (status: '全部' | '待发货' | '运输中' | '已完�
 
 const OrdersPage: React.FC = () => {
   const [search, setSearch] = useState('');
-  const [status, setStatus] = useState<'全部' | '待发货' | '运输中' | '已完成'>('全部');
+  const [status, setStatus] = useState<'全部' | '待发货' | '运输中' | '已送达' | '已完成'>('全部');
   const [sortBy, setSortBy] = useState<'createdAt' | 'amount' | 'id'>('createdAt');
   const [sort, setSort] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
