@@ -12,7 +12,7 @@ interface TimeLineProps {
 // 根据状态获取对应的图标和颜色
 const getStatusConfig = (status: string) => {
   const statusLower = status.toLowerCase();
-  
+
   // 优先精确匹配中文状态
   if (status === '待发货' || statusLower.includes('pending') || statusLower.includes('待发货')) {
     return {
@@ -38,7 +38,7 @@ const getStatusConfig = (status: string) => {
       colors: orderStatusColors['运输中'] || orderStatusColors.default,
     };
   }
-  
+
   // 默认配置
   return {
     icon: Clock,
@@ -57,15 +57,15 @@ export const TimeLine: React.FC<TimeLineProps> = ({
         <Clock className="h-5 w-5 text-blue-500" />
         <h3 className="text-xl font-semibold">{title}</h3>
       </div>
-      
-      <div className="relative space-y-3 pl-6">
+
+      <div className="relative space-y-3 pl-2.5">
         {/* Vertical Line */}
-        <div className="absolute top-2 bottom-2 left-[27px] w-0.5 bg-gray-200"></div>
+        <div className="absolute top-2 bottom-6 left-[29px] w-0.5 bg-gray-200"></div>
 
         {steps.map((step, index) => {
           const { icon: Icon, colors } = getStatusConfig(step.status);
           const isCurrent = step.currentLocation || index === steps.length - 1;
-          
+
           return (
             <div key={step.id} className="group relative flex gap-4">
               {/* Icon Container */}

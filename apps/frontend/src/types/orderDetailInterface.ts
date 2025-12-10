@@ -4,7 +4,7 @@ export interface OrderProduct {
   name: string;
   description: string;
   price: number;
-  amount: number;
+  quantity: number;
   imageUrl?: string;
 }
 
@@ -61,6 +61,7 @@ export interface OrderDetail {
   estimatedTime?: string;
   currentLocation?: [number, number];
   isTimeRisk?: boolean;
+  timestampToAutoConfirm?: number;
 }
 
 // 接口返回格式

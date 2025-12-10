@@ -19,7 +19,7 @@ export interface Order {
 }
 
 export interface LogisticsProvider {
-  id: string;
+  logisticsId: string;
   name: string;
   type: 'EV' | 'Truck' | 'Drone';
   speed: number; // km/h

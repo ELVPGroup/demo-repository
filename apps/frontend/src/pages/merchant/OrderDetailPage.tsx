@@ -1,14 +1,30 @@
 import { TopBar } from '@/components/merchantComponents/TopBar';
 import { useParams, useNavigate } from 'react-router';
 import Sidebar from '@/components/merchantComponents/Sidebar';
-import { ArrowLeft, Package, MapPin, Truck, Hash } from 'lucide-react';
+import { ArrowLeft, Package, MapPin, Truck, Hash, Save, X, Minus } from 'lucide-react';
 import { TimeLine } from '@/components/merchantComponents/TimeLine';
 import { MOCK_PACKAGE_DATA } from '@/constants';
-import { Button, Form, Modal, Input, InputNumber, Space, Card, message, Select, Image } from 'antd';
+import {
+  Button,
+  Form,
+  Modal,
+  Input,
+  InputNumber,
+  message,
+  Select,
+  Tooltip,
+  Drawer,
+  Space,
+  Card,
+  Image,
+} from 'antd';
+import { Plus } from 'lucide-react';
+import ProductCard from '@/components/merchantComponents/product/ProductCard';
+import type { MerchantProduct } from '@/components/merchantComponents/product/ProductFormModal';
+import { merchantAxiosInstance } from '@/utils/axios';
 import { useEffect, useState } from 'react';
-import { Plus, Minus } from 'lucide-react';
-import { useShippingStore } from '@/store/useShippingStore';//import shipping store
-import { useOrderDetailStore } from '@/store/useOrderDetailStore';//import order detail store
+import { useShippingStore } from '@/store/useShippingStore'; //import shipping store
+import { useOrderDetailStore } from '@/store/useOrderDetailStore'; //import order detail store
 import { BASE_SERVER_URL } from '@/config';
 
 import RouteMap from '@/components/RouteMap'; // 导入RouteMap组件
@@ -18,38 +34,118 @@ import type { ShipOrderParams } from '@/store/useOrderDetailStore';
 const OrderDetailPage = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const [editVisible, setEditVisible] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [shipModalVisible, setShipModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [shipForm] = Form.useForm();
 
+  const [drawerVisible, setDrawerVisible] = useState(false);
+  const [merchantProducts, setMerchantProducts] = useState<MerchantProduct[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+
   const { order, loading, fetchOrderDetail, updateOrder, shipOrder } = useOrderDetailStore();
   const { logisticsProviderList, getLogisticsProviderList } = useShippingStore();
 
-  const buttonStyle = orderStatusColors[order?.status as keyof typeof orderStatusColors] || orderStatusColors.default;
+  const buttonStyle =
+    orderStatusColors[order?.status as keyof typeof orderStatusColors] || orderStatusColors.default;
+
+  const fetchMerchantProducts = async () => {
+    try {
+      const res = await merchantAxiosInstance.get('/products');
+      const products = (res.data?.data || []) as MerchantProduct[];
+      setMerchantProducts(products);
+      return products;
+    } catch {
+      message.error('获取商品列表失败');
+      return [];
+    }
+  };
+
+  const handleOpenDrawer = () => {
+    setDrawerVisible(true);
+    fetchMerchantProducts();
+    setSelectedIds(new Set());
+    setQuantities({});
+  };
+
+  const handleDrawerSubmit = () => {
+    const currentProducts = form.getFieldValue('products') || [];
+    const newProducts = [];
+
+    for (const id of selectedIds) {
+      const product = merchantProducts.find((p) => p.productId === id);
+      if (product) {
+        newProducts.push({
+          productId: product.productId,
+          name: product.name,
+          price: product.price,
+          quantity: quantities[id] || 1,
+          description: product.description,
+          amount: product.amount, // 添加库存数量
+        });
+      }
+    }
+
+    const merged = [...currentProducts];
+    newProducts.forEach((newItem) => {
+      const index = merged.findIndex((item) => item.productId === newItem.productId);
+      if (index >= 0) {
+        merged[index] = {
+          ...merged[index],
+          quantity: (merged[index].quantity || 0) + newItem.quantity,
+          amount: newItem.amount, // 更新库存数量
+        };
+      } else {
+        merged.push(newItem);
+      }
+    });
+
+    form.setFieldValue('products', merged);
+    setDrawerVisible(false);
+    message.success(`已添加 ${newProducts.length} 个商品`);
+  };
 
   useEffect(() => {
     if (orderId) {
       fetchOrderDetail(orderId);
       console.log(order?.status);
     }
-  }, [orderId, fetchOrderDetail]);
+  }, [orderId, fetchOrderDetail, order?.status]);
 
-  // 打开编辑 Modal 时初始化表单
+  // 当进入编辑模式时，初始化表单数据
   useEffect(() => {
-    if (editVisible && order) {
-      form.setFieldsValue({
-        amount: order.amount,
-        totalPrice: order.totalPrice,
-        
-        name: order.shippingTo?.name,
-        phone: order.shippingTo?.phone,
-        address: order.shippingTo?.address,
-        location: order.shippingTo?.location || [0, 0],
-        products: order.products || [],
-      });
-    }
-  }, [editVisible, order, form]);
+    let mounted = true;
+
+    const initForm = async () => {
+      if (isEditing && order) {
+        // 获取最新的商品列表以补充库存信息
+        const products = await fetchMerchantProducts();
+        if (!mounted) return;
+
+        form.setFieldsValue({
+          products:
+            order.products?.map((p) => {
+              const merchantProduct = products.find((mp) => mp.productId === p.productId);
+              return {
+                productId: p.productId,
+                quantity: p.quantity,
+                name: p.name,
+                price: p.price,
+                description: p.description,
+                amount: merchantProduct?.amount, // 库存数量
+              };
+            }) || [],
+        });
+      }
+    };
+
+    initForm();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isEditing, order, form]);
 
   // 当发货弹窗打开且供应商列表加载完成时，自动选中第一个供应商
   useEffect(() => {
@@ -59,24 +155,10 @@ const OrderDetailPage = () => {
         const currentValue = shipForm.getFieldValue('logisticsId');
         const firstProvider = logisticsProviderList[0];
         const firstId = String(firstProvider.logisticsId); // 使用 logisticsId 而不是 id
-        
-        console.log('=== Select Value Debug ===');
-        console.log('Current form value:', currentValue, 'type:', typeof currentValue);
-        console.log('First provider:', firstProvider.name, 'logisticsId:', firstId, 'original id type:', typeof firstProvider.logisticsId);
-        console.log('All providers:', logisticsProviderList.map(p => ({ name: p.name, logisticsId: String(p.logisticsId) })));
-        
+
         // 如果当前没有值，则设置为第一个供应商
         if (!currentValue) {
-          console.log('Setting form value to:', firstId);
           shipForm.setFieldsValue({ logisticsId: firstId });
-          
-          // 验证设置是否成功
-          setTimeout(() => {
-            const newValue = shipForm.getFieldValue('logisticsId');
-            console.log('After setFieldsValue, form value is:', newValue, 'type:', typeof newValue);
-          }, 50);
-        } else {
-          console.log('Form already has value:', currentValue);
         }
       }, 150);
       return () => clearTimeout(timer);
@@ -87,21 +169,21 @@ const OrderDetailPage = () => {
   }, [shipModalVisible, logisticsProviderList, shipForm]);
 
   // 根据订单状态和发货状态确定当前位置
-  const getCurrentLocation = () => {
-    if (!order) return null;
+  const getCurrentLocation = (): [number, number] | undefined => {
+    if (!order) return undefined;
 
     // 如果订单已送达，使用收货地址作为当前位置
     if (order.status === '已签收' || order.status === 'delivered') {
-      return order.shippingTo?.location || order.shippingTo?.location;
+      return order.shippingTo?.location;
     }
 
     // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
     if (order.status === '运输中' || order.status === '已发货') {
-      return order.shippingFrom?.location || order.shippingFrom?.location;
+      return order.shippingFrom?.location;
     }
 
     // 默认使用发货地址
-    return order.shippingFrom?.location || order.addressInfo?.location;
+    return order.shippingFrom?.location;
   };
 
   const handleSave = async () => {
@@ -112,53 +194,49 @@ const OrderDetailPage = () => {
 
       const updatedOrder = {
         ...order,
-        amount: values.amount,
-        totalPrice: values.totalPrice,
-        shippingTo: {
-          addressInfoId: values.addressInfoId,
-          name: values.name,
-          phone: values.phone,
-          address: values.address,
-          location: values.location,
-        },
         products: values.products,
       };
 
+      console.log('updatedOrder', updatedOrder);
+
       await updateOrder(updatedOrder);
-      setEditVisible(false);
-      message.success('订单信息更新成功');
+      setIsEditing(false);
     } catch (error) {
       console.error('表单验证失败:', error);
     }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    form.resetFields();
   };
 
   // 打开发货弹窗
   const handleOpenShipModal = async () => {
     setShipModalVisible(true);
     shipForm.resetFields();
-  
+
     try {
       await getLogisticsProviderList(); // 加载供应商列表
-      
+
       // 获取最新的供应商列表
       const list = useShippingStore.getState().logisticsProviderList;
       console.log('供应商列表:', list);
-  
+
       if (list.length === 0) {
-        message.warning("暂无物流供应商，请添加后再发货");
+        message.warning('暂无物流供应商，请添加后再发货');
       }
       // 注意：初始值设置已移至 useEffect，这里不需要手动设置
-  
     } catch (err: unknown) {
-      const errorMessage = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-        : err instanceof Error
-          ? err.message
-          : '获取供应商失败';
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : err instanceof Error
+            ? err.message
+            : '获取供应商失败';
       message.error(errorMessage);
     }
   };
-  
 
   // 关闭发货弹窗
   const handleCloseShipModal = () => {
@@ -173,9 +251,9 @@ const OrderDetailPage = () => {
     try {
       // 验证表单并获取值
       const values = await shipForm.validateFields();
-      
+
       if (!values.logisticsId) {
-        message.error("请选择物流供应商");
+        message.error('请选择物流供应商');
         return;
       }
 
@@ -193,18 +271,20 @@ const OrderDetailPage = () => {
         // 表单验证错误，不需要显示错误消息
         return;
       }
-      const errorMessage = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-        : err instanceof Error
-          ? err.message
-          : '发货失败，请重试';
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+          : err instanceof Error
+            ? err.message
+            : '发货失败，请重试';
       message.error(errorMessage);
     }
   };
 
   // 判断是否可以发货（待处理或已确认状态）
   const canShip = order && order.shippingStatus === '待发货';
-
+  // 判断是否可以编辑（只有待发货状态可以编辑）
+  const canEdit = order && (order.status === '待发货' || order.status === 'PENDING');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -229,23 +309,32 @@ const OrderDetailPage = () => {
           >
             <Select
               placeholder="请选择物流供应商"
-              style={{ width: "100%" }}
+              style={{ width: '100%' }}
               loading={loading}
               showSearch={false}
               allowClear={false}
               notFoundContent={loading ? '加载中...' : '暂无物流供应商'}
-              options={logisticsProviderList?.map(p => {
-                const id = String(p.logisticsId); // 使用 logisticsId 而不是 id
-                console.log('Mapping provider:', p.name, 'logisticsId:', id, 'original id type:', typeof p.logisticsId);
-                return {
-                  label: p.name,
-                  value: id,
-                };
-              }) || []}
+              options={
+                logisticsProviderList?.map((p) => {
+                  const id = String(p.logisticsId); // 使用 logisticsId 而不是 id
+                  return {
+                    label: p.name,
+                    value: id,
+                  };
+                }) || []
+              }
             />
           </Form.Item>
           {logisticsProviderList.length === 0 && !loading && (
-            <div style={{ marginTop: 16, padding: 12, backgroundColor: '#fff7e6', borderRadius: 4, border: '1px solid #ffd591' }}>
+            <div
+              style={{
+                marginTop: 16,
+                padding: 12,
+                backgroundColor: '#fff7e6',
+                borderRadius: 4,
+                border: '1px solid #ffd591',
+              }}
+            >
               <div style={{ fontSize: 12, color: '#d46b08' }}>
                 提示：暂无物流供应商，请先添加物流供应商
               </div>
@@ -254,32 +343,50 @@ const OrderDetailPage = () => {
         </Form>
       </Modal>
 
-      {/* 编辑订单信息模态框 */}
-      <Modal
-        title="编辑订单信息"
-        open={editVisible}
-        onCancel={() => {
-          setEditVisible(false);
-          form.resetFields();
-        }}
-        okText="保存"
-        cancelText="取消"
-        onOk={handleSave}
-        width={800}
-        style={{ top: 20 }}
+      {/* 选择商品抽屉 */}
+      <Drawer
+        title="选择商品"
+        size={400}
+        onClose={() => setDrawerVisible(false)}
+        open={drawerVisible}
+        extra={
+          <Space>
+            <Button onClick={() => setDrawerVisible(false)}>取消</Button>
+            <Button type="primary" onClick={handleDrawerSubmit}>
+              确认添加 ({selectedIds.size})
+            </Button>
+          </Space>
+        }
       >
-        <Form form={form} layout="vertical" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-          {/* 订单金额信息 */}
-          <Card size="small" title="订单金额" style={{ marginBottom: 16 }}>
-            <Form.Item
-              label="总价"
-              name="totalPrice"
-              rules={[{ required: true, message: '请输入总价' }]}
-            >
-              <InputNumber min={0} precision={2} style={{ width: '100%' }} prefix="¥" />
-            </Form.Item>
-          </Card>
+        {merchantProducts.map((p) => (
+          <div className="mb-4">
+            <ProductCard
+              key={p.productId}
+              product={p}
+              mode="selection"
+              selected={selectedIds.has(p.productId!)}
+              selectionQuantity={quantities[p.productId!] || 1}
+              onSelect={(selected) => {
+                const newSet = new Set(selectedIds);
+                if (selected) newSet.add(p.productId!);
+                else newSet.delete(p.productId!);
+                setSelectedIds(newSet);
+                if (selected && !quantities[p.productId!]) {
+                  setQuantities((prev) => ({ ...prev, [p.productId!]: 1 }));
+                }
+              }}
+              onQuantityChange={(q) => {
+                setQuantities((prev) => ({ ...prev, [p.productId!]: q }));
+              }}
+            />
+          </div>
+        ))}
+      </Drawer>
 
+      {/* 编辑订单信息模态框 */}
+      {/* <EditOrderModal ... /> */}
+      <Modal>
+        <Form>
           {/* 配送信息 */}
           <Card size="small" title="配送信息" style={{ marginBottom: 16 }}>
             <Form.Item
@@ -402,17 +509,32 @@ const OrderDetailPage = () => {
               <span>返回订单列表</span>
             </Button>
 
-            {/* 编辑按钮 */}
-            <Button
-              type="primary"
-              onClick={() => setEditVisible(true)}
-              disabled={!order || loading}
-            >
-              编辑订单
-            </Button>
+            {/* 编辑/保存按钮 */}
+            {isEditing ? (
+              <>
+                <Button onClick={handleCancelEdit}>
+                  <X size={18} className="mr-1" />
+                  取消
+                </Button>
+                <Button type="primary" onClick={handleSave} loading={loading}>
+                  <Save size={18} className="mr-1" />
+                  保存
+                </Button>
+              </>
+            ) : (
+              <Tooltip title={!canEdit ? '当前订单状态不可编辑' : ''}>
+                <Button
+                  type="primary"
+                  onClick={() => setIsEditing(true)}
+                  disabled={!canEdit || loading}
+                >
+                  编辑订单
+                </Button>
+              </Tooltip>
+            )}
 
             {/* 模拟发货按钮 */}
-            {canShip && (
+            {canShip && !isEditing && (
               <Button
                 type="primary"
                 danger
@@ -445,14 +567,75 @@ const OrderDetailPage = () => {
                   <h2 className="text-xl font-semibold">商品清单</h2>
                 </div>
                 <div className="space-y-4">
-                  {order.products && order.products.length > 0 ? (
+                  {isEditing ? (
+                    <Form form={form} component={false}>
+                      <Form.List name="products">
+                        {(fields) => (
+                          <>
+                            {fields.map(({ key, name, ...restField }) => {
+                              const product = form.getFieldValue(['products', name]);
+                              console.log('product', product);
+                              return (
+                                <div
+                                  key={key}
+                                  className="flex items-center justify-between border-b border-gray-100 pb-4"
+                                >
+                                  <div className="flex-1">
+                                    {/* 隐藏字段存储必要信息 */}
+                                    <Form.Item {...restField} name={[name, 'productId']} hidden>
+                                      <Input />
+                                    </Form.Item>
+                                    <div className="font-medium text-gray-900">{product?.name}</div>
+                                    {product?.description && (
+                                      <div className="mt-1 text-sm text-gray-500">
+                                        {product.description}
+                                      </div>
+                                    )}
+                                    <div className="mt-2 flex items-center gap-2">
+                                      <span className="text-sm text-gray-500">数量：</span>
+                                      <Form.Item
+                                        {...restField}
+                                        name={[name, 'quantity']}
+                                        rules={[{ required: true, message: '请输入数量' }]}
+                                        style={{ marginBottom: 0 }}
+                                      >
+                                        <InputNumber
+                                          min={1}
+                                          max={product.amount + product.quantity}
+                                          size="small"
+                                        />
+                                      </Form.Item>
+                                    </div>
+                                  </div>
+                                  <div className="text-lg font-semibold text-gray-900">
+                                    ¥{Number(product?.price || 0).toFixed(2)}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </>
+                        )}
+                      </Form.List>
+                      <Button
+                        type="dashed"
+                        onClick={handleOpenDrawer}
+                        block
+                        icon={<Plus size={16} />}
+                        style={{ marginTop: 16 }}
+                      >
+                        添加商品
+                      </Button>
+                    </Form>
+                  ) : order.products && order.products.length > 0 ? (
                     <>
-                      {order.products.map((product, index) => (
+                      {order.products.map((product, index, arr) => (
                         <div
                           key={product.productId || index}
-                          className="flex items-center justify-between border-b border-gray-100 pb-4"
+                          className={`flex items-center justify-between border-gray-100 ${
+                            index !== arr.length - 1 ? 'border-b pb-4' : ''
+                          }`}
                         >
-                          <div className="flex items-center gap-4 flex-1">
+                          <div className="flex flex-1 items-center gap-4">
                             {/* 商品图片 */}
                             {product.imageUrl ? (
                               <Image
@@ -468,7 +651,7 @@ const OrderDetailPage = () => {
                                 <Package className="h-8 w-8" />
                               </div>
                             )}
-                            
+
                             {/* 商品信息 */}
                             <div className="flex-1">
                               <div className="font-medium text-gray-900">{product.name}</div>
@@ -478,12 +661,12 @@ const OrderDetailPage = () => {
                                 </div>
                               )}
                               <div className="mt-1 text-sm text-gray-500">
-                                数量：x{product.amount}
+                                数量：x{product.quantity}
                               </div>
                             </div>
                           </div>
                           <div className="text-lg font-semibold text-gray-900">
-                            ¥{product.price.toFixed(2)}
+                            ¥{Number(product?.price || 0).toFixed(2)}
                           </div>
                         </div>
                       ))}
@@ -524,6 +707,7 @@ const OrderDetailPage = () => {
                       showInfoCard={true}
                       distance={order.distance}
                       estimatedTime={order.estimatedTime}
+                      orderId={order.orderId}
                       showProgressIndicator={true}
                       className="h-full"
                       onMapClick={(coords) => {
@@ -549,6 +733,7 @@ const OrderDetailPage = () => {
                       showInfoCard={true}
                       showProgressIndicator={true}
                       className="h-full"
+                      status={order.status}
                     />
                   ) : (
                     // 如果没有任何地址信息，显示提示
@@ -603,9 +788,8 @@ const OrderDetailPage = () => {
                         color: buttonStyle.text,
                         border: buttonStyle.border,
                       }}
-
                     >
-                      {order.shippingStatus || '未知'}
+                      {order.status || '未知'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -657,7 +841,6 @@ const OrderDetailPage = () => {
                             {order.shippingFrom.address || '-'}
                           </div>
                         </div>
-                    
                       </div>
                     </div>
                   )}
@@ -685,35 +868,6 @@ const OrderDetailPage = () => {
                             {order.shippingTo.address || '-'}
                           </div>
                         </div>
-    
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 如果没有独立的发货/收货地址，显示收件人信息 */}
-                  {!order.shippingFrom && !order.shippingTo && order.addressInfo && (
-                    <div>
-                      <div className="mb-2 text-sm font-medium text-gray-700">收件人信息</div>
-                      <div className="space-y-3">
-                        <div>
-                          <div className="text-sm text-gray-500">姓名</div>
-                          <div className="mt-1 font-medium text-gray-900">
-                            {order.shippingTo.name || '-'}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-500">联系电话</div>
-                          <div className="mt-1 font-medium text-gray-900">
-                            {order.shippingTo.phone || '-'}
-                          </div>
-                        </div>
-                        <div>
-                          <div className="text-sm text-gray-500">地址</div>
-                          <div className="mt-1 font-medium text-gray-900">
-                            {order.shippingTo.address || '-'}
-                          </div>
-                        </div>
-                      
                       </div>
                     </div>
                   )}
@@ -736,6 +890,7 @@ const OrderDetailPage = () => {
                         description: item.description || '',
                         completed: !isLast,
                         current: isLast,
+                        currentLocation: false,
                       };
                     })}
                   />

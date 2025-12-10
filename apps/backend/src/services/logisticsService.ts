@@ -1,21 +1,53 @@
-import type { GeoPoint, SimulationConfig, SimulationState } from '@evlp/shared/types/index.js';
+import type {
+  GeoPoint,
+  OrderStatus,
+  ShippingStatus,
+  SimulationConfig,
+  SimulationState,
+} from '@evlp/shared/types/index.js';
 import { broadcastOrderShipping } from '@/ws/orderSubscriptions.js';
 import prisma from '@/db.js';
-import { getDictName, shippingStatusDict } from '@evlp/shared/utils/dicts.js';
-import dayjs from 'dayjs';
+import { generateRealtimeLocationFromState } from '@/utils/locationSimulatiom.js';
 
-const PUSH_INTERVAL_MS = 5000;
+const PUSH_INTERVAL_MS = 2000;
 
 export class LogisticsService {
   private serviceUrl = process.env['SIMULATION_SERVICE_URL'] || 'http://localhost:9001';
   private pollingTimers = new Map<number, NodeJS.Timeout>();
 
+  /**
+   * 模拟发货轨迹：向模拟轨迹服务发送请求，启动或继续模拟发货轨迹
+   * @param orderId 订单ID
+   * @param startPolling 是否启动轮询。默认false。只有当websocket连接建立后，才需要启动轮询
+   * @param origin 起点坐标。如果为空，会先从模拟服务器请求当前状态
+   * @param destination 终点坐标。如果为空，会先从模拟服务器请求当前状态
+   * @param options 模拟配置选项
+   * @returns 模拟状态。如果服务未运行或新启动，返回null
+   */
   async simulateShipment(
     orderId: number,
-    origin: GeoPoint,
-    destination: GeoPoint,
+    startPolling: boolean = false,
+    origin?: GeoPoint,
+    destination?: GeoPoint,
     options?: Partial<SimulationConfig>
   ) {
+    if (!origin || !destination) {
+      // 缺少起点或终点，先从模拟服务器请求当前状态
+      const state = await this.getShipmentState(orderId);
+      if (state && state.progress !== 1) {
+        // 服务已经在运行中
+        if (startPolling) {
+          // 重新启动轮询，确保能够及时获取最新状态
+          this.stopPolling(orderId);
+          this.startPolling(orderId);
+        }
+        return state;
+      } else {
+        // 当前不存在已启动的服务。而缺少起点或终点，就无法启动新的模拟轨迹服务
+        throw new Error('缺少起点或终点，无法启动新的模拟轨迹服务');
+      }
+    }
+
     // 调用模拟服务启动模拟
     const response = await fetch(`${this.serviceUrl}/simulations`, {
       method: 'POST',
@@ -32,10 +64,13 @@ export class LogisticsService {
       throw new Error(`Simulation service error: ${response.statusText}`);
     }
 
-    this.startPolling(orderId);
+    if (startPolling) {
+      this.startPolling(orderId);
+    }
+    return null;
   }
 
-  private startPolling(orderId: number) {
+  startPolling(orderId: number) {
     if (this.pollingTimers.has(orderId)) return;
 
     const timer = setInterval(() => this.pollShipment(orderId), PUSH_INTERVAL_MS);
@@ -44,32 +79,25 @@ export class LogisticsService {
 
   private async pollShipment(orderId: number) {
     const state = await this.getShipmentState(orderId);
+
     if (!state) {
-      // Simulation might have been stopped externally or lost
+      // 如果模拟服务返回空状态，认为模拟已结束
       this.stopPolling(orderId);
       return;
     }
 
-    const now = Date.now();
-    const status = state.progress <= 0 ? 'PACKING' : state.progress < 1 ? 'SHIPPED' : 'DELIVERED';
-
     // 广播轨迹更新
-    broadcastOrderShipping(orderId, {
-      location: state.location,
-      timestamp: dayjs(now).format('YYYY-MM-DD HH:mm:ss'),
-      status: getDictName(status as keyof typeof shippingStatusDict, shippingStatusDict),
-      progress: state.progress,
-    });
+    broadcastOrderShipping(orderId, { ...generateRealtimeLocationFromState(state) });
 
-    if (state.progress >= 1) {
-      await this.handleDelivered(orderId);
+    if (state.progress >= 0.99) {
+      await this.handleShipingStatusChange(orderId, 'DELIVERED', 'DELIVERED', '订单送达');
       this.stopPolling(orderId);
       // 停止模拟
       this.stopSimulation(orderId);
     }
   }
 
-  private stopPolling(orderId: number) {
+  stopPolling(orderId: number) {
     const timer = this.pollingTimers.get(orderId);
     if (timer) {
       clearInterval(timer);
@@ -77,14 +105,19 @@ export class LogisticsService {
     }
   }
 
-  private async handleDelivered(orderId: number) {
+  private async handleShipingStatusChange(
+    orderId: number,
+    newOrderStatus: OrderStatus,
+    newShippingStatus: ShippingStatus,
+    description: string
+  ) {
     await prisma.$transaction(async (tx) => {
-      await tx.order.update({ where: { orderId }, data: { status: 'COMPLETED' } });
+      await tx.order.update({ where: { orderId }, data: { status: newOrderStatus } });
       await tx.timelineItem.create({
         data: {
           orderDetail: { connect: { orderId } },
-          shippingStatus: 'DELIVERED',
-          description: '订单送达',
+          shippingStatus: newShippingStatus,
+          description,
         },
       });
     });
@@ -103,7 +136,7 @@ export class LogisticsService {
       if (response.status === 404) return null;
       if (!response.ok) return null;
       const data = (await response.json()) as SimulationState;
-      console.log('Shipment state:', data);
+      console.log('Get shipment state from simulation service:', orderId, data);
       return data;
     } catch (e) {
       console.error('Failed to get shipment state', e);

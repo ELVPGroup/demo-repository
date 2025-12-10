@@ -146,15 +146,9 @@ const MerchantDashboard: React.FC = () => {
         
         if (success) {
           message.success('配送半径已更新');
-          
-          // 半径更新后重新计算地图边界并获取订单
-          const bounds = calculateMapBounds(deliveryArea.center, newRadius);
-          setBoundsParams({
-            northEast: bounds.northEast,
-            southWest: bounds.southWest
-          });
-          
-          // 延迟一下再获取订单，确保参数已更新
+
+          // 半径更新后直接使用当前地图视口边界获取订单（由 AMapVisualization 的 onBoundsChange 更新 boundsParams）
+          // 直接调用 fetchOrdersByBounds，以确保以当前视口为准
           setTimeout(() => {
             fetchOrdersByBounds();
           }, 100);
@@ -227,22 +221,12 @@ const MerchantDashboard: React.FC = () => {
     });
 
     setOrders(convertedOrders);
-    console.debug('convertedOrders (sample):', convertedOrders.slice(0, 5));
+    console.debug('convertedOrders (sample):', convertedOrders);
   }, [ordersFromAPI, deliveryArea, radius, currentProvider]);
 
   // 手动刷新订单
   const handleRefreshOrders = useCallback(() => {
-    if (!deliveryArea?.center) {
-      message.warning('请先设置配送中心');
-      return;
-    }
-    
-    const bounds = calculateMapBounds(deliveryArea.center, deliveryArea.radius ?? radius);
-    setBoundsParams({
-      northEast: bounds.northEast,
-      southWest: bounds.southWest
-    });
-    
+    // 直接使用当前地图视口的 boundsParams（由 `AMapVisualization` 在地图交互时更新）来刷新订单
     fetchOrdersByBounds();
   }, [deliveryArea, radius, setBoundsParams, fetchOrdersByBounds]);
 
@@ -565,10 +549,10 @@ const MerchantDashboard: React.FC = () => {
           markers={mapMarkers}
           showCircle={true}
           showRoute={false}
-          onBoundsChange={(northEast, southWest) => {
-            // 当地图视野变化时，更新边界参数并获取订单
-            setBoundsParams({ northEast, southWest });
-          }}
+          onBoundsChange={(northEast: { lat: number; lng: number }, southWest: { lat: number; lng: number }) => {
+              // 当地图视野变化时，更新边界参数并获取订单
+              setBoundsParams({ northEast, southWest });
+            }}
         />
         
         {/* 地图图例 */}

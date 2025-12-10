@@ -18,10 +18,7 @@ import { generateServiceId } from '@/utils/serverIdHandler.js';
 import { ServiceKey } from '@/utils/serverIdHandler.js';
 import { getDictName, orderStatusDict, shippingStatusDict } from '@evlp/shared/utils/dicts.js';
 import {
-  getDefinedKeyValues,
   haversineDistanceMeters,
-  // METERS_PER_DEGREE_LAT,
-  // metersPerDegreeLonAtLat,
   parseAmapPolyline,
   kmhToMps,
 } from '@evlp/shared/utils/general.js';
@@ -324,41 +321,74 @@ export class OrderService {
     await prisma.$transaction(async (tx) => {
       const changes: string[] = []; // 记录变更
 
-      if (updatePayload.status) {
+      if (updatePayload.status && updatePayload.status !== order.status) {
         // 更新订单状态
         await tx.order.update({ where: { orderId }, data: { status: updatePayload.status } });
         changes.push(`订单状态更新为: ${getDictName(updatePayload.status, orderStatusDict)}`);
       }
 
-      if (updatePayload.shippingInfo) {
-        // 更新收货地址信息
-        const { addressInfoId, name, phone, address } = updatePayload.shippingInfo;
-        const addressUpdate: Record<string, string> = {};
-        // 将非空字段添加到更新对象
-        Object.assign(addressUpdate, getDefinedKeyValues({ name, phone, address }));
-        if (Object.keys(addressUpdate).length > 0) {
-          await tx.addressInfo.update({ where: { addressInfoId }, data: addressUpdate });
-          changes.push('收货地址更新');
-        }
-      }
-
       if (updatePayload.products && updatePayload.products.length > 0) {
         // 更新订单商品信息
         for (const product of updatePayload.products) {
-          const { productId, amount, name, description, price } = product;
-          if (amount !== undefined) {
-            await tx.orderItem.upsert({
+          const { productId, quantity } = product;
+          if (quantity !== undefined) {
+            // 获取之前的订单项信息
+            const oldOrderItem = await tx.orderItem.findUnique({
               where: { orderId_productId: { orderId, productId } },
-              update: { quantity: amount },
-              create: { orderId, productId, quantity: amount },
+              include: { product: true },
             });
-          }
 
-          const productUpdate: Record<string, unknown> = {};
-          // 将非空字段添加到更新对象
-          Object.assign(productUpdate, getDefinedKeyValues({ name, description, price }));
-          if (Object.keys(productUpdate).length > 0) {
-            await tx.product.update({ where: { productId }, data: productUpdate });
+            if (oldOrderItem) {
+              const diff = quantity - oldOrderItem.quantity;
+              if (diff !== 0) {
+                // 如果数量增加了，需要减少库存；如果数量减少了，需要增加库存
+                // 检查库存是否足够（仅当需要额外库存时）
+                if (diff > 0) {
+                  const currentProduct = await tx.product.findUnique({
+                    where: { productId },
+                  });
+                  if (!currentProduct || currentProduct.amount < diff) {
+                    throw new Error(`商品库存不足 (ID: ${productId})`);
+                  }
+                }
+
+                // 更新库存
+                await tx.product.update({
+                  where: { productId },
+                  data: { amount: { decrement: diff } },
+                });
+
+                // 更新订单项数量
+                await tx.orderItem.update({
+                  where: { orderId_productId: { orderId, productId } },
+                  data: { quantity },
+                });
+                changes.push(
+                  `商品【${oldOrderItem.product.name}】的数量由 ${oldOrderItem.quantity} 变更为 ${quantity}`
+                );
+              }
+            } else {
+              // 新增商品项（如果之前不存在）
+              // 检查库存
+              const currentProduct = await tx.product.findUnique({
+                where: { productId },
+              });
+              if (!currentProduct || currentProduct.amount < quantity) {
+                throw new Error(`商品库存不足 (ID: ${productId})`);
+              }
+
+              // 扣减库存
+              await tx.product.update({
+                where: { productId },
+                data: { amount: { decrement: quantity } },
+              });
+
+              // 创建订单项
+              await tx.orderItem.create({
+                data: { orderId, productId, quantity },
+              });
+              changes.push(`新增商品【${currentProduct.name}】、数量 ${quantity}`);
+            }
           }
         }
 
@@ -371,10 +401,13 @@ export class OrderService {
           (acc, item) => acc + item.quantity * Number(item.product.price),
           0
         );
-        await tx.order.update({
-          where: { orderId },
-          data: { totalPrice: newTotalPrice },
-        });
+        if (newTotalPrice !== Number(order.totalPrice)) {
+          await tx.order.update({
+            where: { orderId },
+            data: { totalPrice: newTotalPrice },
+          });
+          changes.push(`订单总价变更为: ${Number(newTotalPrice).toFixed(2)}`);
+        }
       }
 
       if (changes.length > 0) {
@@ -382,7 +415,7 @@ export class OrderService {
           data: {
             orderDetail: { connect: { orderId } },
             // 物流状态描述更新
-            ...(changes.length > 0 ? { description: changes.join('; ') } : {}),
+            description: changes.join('; '),
           },
         });
       }
@@ -418,6 +451,7 @@ export class OrderService {
       isTimeRisk: boolean;
     }> = {};
     if ((statusVal === 'PENDING' || statusVal === 'SHIPPED') && from && to) {
+      // 状态为 PENDING （未发货）或 SHIPPED（已发货）时，计算当前位置、距离、预计到达时间并返回
       if (statusVal === 'PENDING') {
         const currentLocation: [number, number] = [from.longitude, from.latitude];
         let distanceKm = 0;
@@ -457,6 +491,7 @@ export class OrderService {
           isTimeRisk: false,
         };
       } else if (statusVal === 'SHIPPED') {
+        // 已发货状态，丛模拟轨迹服务器（可替换为真实GPS调度服务地址）获取实时物流状态
         const live = await logisticsService.getShipmentState(order.orderId);
         if (live) {
           console.log('live State:', live);
@@ -474,6 +509,17 @@ export class OrderService {
             isTimeRisk: isRisk,
           };
         }
+      }
+    }
+
+    // 计算自动确认收货时间戳
+    let timestampToAutoConfirm: number | undefined;
+    if (statusVal === 'SHIPPED' || statusVal === 'DELIVERED') {
+      // 查找发货时间
+      const shippedItem = timeline.find((item) => item.shippingStatus === 'SHIPPED');
+      if (shippedItem) {
+        // 发货时间 + 10天
+        timestampToAutoConfirm = dayjs(shippedItem.time).add(10, 'day').valueOf();
       }
     }
 
@@ -507,8 +553,10 @@ export class OrderService {
         productId: generateServiceId(orderItem.productId, ServiceKey.product),
         name: orderItem.product.name,
         price: Number(orderItem.product.price),
-        amount: orderItem.quantity,
+        quantity: orderItem.quantity,
+        amount: orderItem.product.amount,
         description: orderItem.product.description ?? '',
+        imageUrl: orderItem.product.imageUrl ?? '',
       })),
       amount,
       totalPrice: Number(order.totalPrice),
@@ -522,6 +570,7 @@ export class OrderService {
       ...(extras.distance !== undefined ? { distance: extras.distance } : {}),
       ...(extras.estimatedTime ? { estimatedTime: extras.estimatedTime } : {}),
       ...(typeof extras.isTimeRisk === 'boolean' ? { isTimeRisk: extras.isTimeRisk } : {}),
+      ...(timestampToAutoConfirm ? { timestampToAutoConfirm } : {}),
     };
   }
 
@@ -569,9 +618,10 @@ export class OrderService {
         },
       });
     });
-    // 开始模拟发货轨迹
+    // 开始模拟发货轨迹（但不启动轮询。只有websocket连接才能启动）
     await logisticsService.simulateShipment(
       orderId,
+      false,
       [from.longitude, from.latitude],
       [to.longitude, to.latitude],
       { speedKmh: logistics.speed }
@@ -648,6 +698,42 @@ export class OrderService {
     }
 
     return { createdOrderIds, failedGroups };
+  }
+
+  /**
+   * 客户端确认收货
+   */
+  async confirmReceipt(userId: number, orderId: number) {
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      throw new Error('订单不存在');
+    }
+    if (order.userId !== userId) {
+      throw new Error('没有权限操作该订单');
+    }
+
+    // 只有订单状态为SHIPPED（运输中）、DELIVERED（已送达）才可以确认收货
+    if (order.status !== 'SHIPPED' && order.status !== 'DELIVERED') {
+      throw new Error('当前订单状态不可确认收货');
+    }
+
+    // 更新状态为 COMPLETED 并添加时间轴
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { orderId },
+        data: { status: 'COMPLETED' },
+      });
+
+      await tx.timelineItem.create({
+        data: {
+          orderDetail: { connect: { orderId } },
+          shippingStatus: 'DELIVERED', // 确认收货即代表已签收
+          description: '用户确认收货，订单已完成',
+        },
+      });
+    });
+
+    return this.getOrderDetail(orderId);
   }
 }
 
