@@ -26,13 +26,13 @@ class ClientProductController {
         return;
       }
 
-      const data = await productService.listClient({
+      const { data, total } = await productService.listClient({
         limit: numericLimit!,
         offset: numericOffset!,
         ...(productName ? { productName } : {}),
       });
       ctx.status = 200;
-      ctx.body = { _data: data, _message: '获取商品列表成功' };
+      ctx.body = { _data: data, _message: '获取商品列表成功', total };
     } catch (error) {
       ctx.status = 400;
       ctx.body = { _message: error instanceof Error ? error.message : '获取商品列表失败' };

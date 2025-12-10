@@ -29,12 +29,13 @@ export class UserOrderController {
         ...getTruthyKeyValues(filterParams),
       };
 
-      const result = await orderService.getOrderList(params);
+      const { data, total } = await orderService.getOrderList(params);
 
       ctx.status = 200;
       ctx.body = {
-        _data: result,
+        _data: data,
         _message: '获取订单列表成功',
+        total,
       };
     } catch (error) {
       ctx.status = 400;

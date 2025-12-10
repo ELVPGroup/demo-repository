@@ -90,6 +90,10 @@ export class OrderService {
     if ('status' in payload && payload.status !== undefined) {
       where['status'] = payload.status;
     }
+
+    // 获取总数
+    const total = await orderModel.count({ where });
+
     const orders = (await orderModel.findMany({
       where,
       ...(payload.offset !== undefined ? { skip: payload.offset } : {}),
@@ -98,7 +102,7 @@ export class OrderService {
       include: orderModelFindInclude,
     })) as OrderListPayload[];
 
-    return orders.map((order) => {
+    const data = orders.map((order) => {
       const amount = order.orderItems.reduce(
         (acc: number, it: { quantity: number }) => acc + it.quantity,
         0
@@ -119,6 +123,8 @@ export class OrderService {
           : {}),
       };
     });
+
+    return { data, total };
   }
 
   /**
@@ -185,7 +191,10 @@ export class OrderService {
       include: areaOrderModelFindInclude,
     })) as AreaOrderListPayload[];
 
-    return ordersRaw.map((order) => {
+    // 获取总数
+    const total = await orderModel.count({ where });
+
+    const data = ordersRaw.map((order) => {
       const to = order.detail?.addressTo;
       const location = to ? ([to.longitude, to.latitude] as [number, number]) : undefined;
       const distance = location
@@ -210,6 +219,7 @@ export class OrderService {
         userName: order.user?.name ?? '',
       };
     });
+    return { data, total };
   }
 
   /**
