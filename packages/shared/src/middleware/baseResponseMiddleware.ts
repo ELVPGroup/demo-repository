@@ -39,6 +39,7 @@ export async function baseResponseMiddleware(ctx: Context, next: Next) {
       status: ctx.status,
       message: typeof _message === 'string' ? _message : 'OK',
       data: _data ? _data : rest,
+      ...rest,
     };
   } else {
     // 错误消息处理

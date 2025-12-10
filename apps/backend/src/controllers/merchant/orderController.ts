@@ -37,12 +37,13 @@ export class MerchantOrderController {
         // 加入可选筛选参数
         ...getTruthyKeyValues(filterParams),
       };
-      const result = await orderService.getOrderList(params);
+      const { data, total } = await orderService.getOrderList(params);
 
       ctx.status = 200;
       ctx.body = {
-        _data: result,
+        _data: data,
         _message: '获取订单列表成功',
+        total,
       };
     } catch (error) {
       ctx.status = 400;
@@ -76,12 +77,13 @@ export class MerchantOrderController {
         ...(mapViewport ? { mapViewport } : {}),
       };
 
-      const result = await orderService.getDeliveryAreaOrderList(params);
+      const { data, total } = await orderService.getDeliveryAreaOrderList(params);
 
       ctx.status = 200;
       ctx.body = {
-        _data: result,
+        _data: data,
         _message: '获取配送区域订单列表成功',
+        total,
       };
     } catch (error) {
       ctx.status = 400;
