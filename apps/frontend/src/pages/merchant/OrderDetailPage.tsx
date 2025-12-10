@@ -1,7 +1,7 @@
 import { TopBar } from '@/components/merchantComponents/TopBar';
 import { useParams, useNavigate } from 'react-router';
 import Sidebar from '@/components/merchantComponents/Sidebar';
-import { ArrowLeft, Package, MapPin, Truck, Hash, Save, X } from 'lucide-react';
+import { ArrowLeft, Package, MapPin, Truck, Hash, Save, X, Minus } from 'lucide-react';
 import { TimeLine } from '@/components/merchantComponents/TimeLine';
 import { MOCK_PACKAGE_DATA } from '@/constants';
 import {
@@ -15,6 +15,8 @@ import {
   Tooltip,
   Drawer,
   Space,
+  Card,
+  Image,
 } from 'antd';
 import { Plus } from 'lucide-react';
 import ProductCard from '@/components/merchantComponents/product/ProductCard';
@@ -23,6 +25,7 @@ import { merchantAxiosInstance } from '@/utils/axios';
 import { useEffect, useState } from 'react';
 import { useShippingStore } from '@/store/useShippingStore'; //import shipping store
 import { useOrderDetailStore } from '@/store/useOrderDetailStore'; //import order detail store
+import { BASE_SERVER_URL } from '@/config';
 
 import RouteMap from '@/components/RouteMap'; // 导入RouteMap组件
 import { orderStatusColors } from '@/theme/theme';
@@ -368,7 +371,6 @@ const OrderDetailPage = () => {
                 if (selected) newSet.add(p.productId!);
                 else newSet.delete(p.productId!);
                 setSelectedIds(newSet);
-
                 if (selected && !quantities[p.productId!]) {
                   setQuantities((prev) => ({ ...prev, [p.productId!]: 1 }));
                 }
@@ -383,6 +385,118 @@ const OrderDetailPage = () => {
 
       {/* 编辑订单信息模态框 */}
       {/* <EditOrderModal ... /> */}
+      <Modal>
+        <Form>
+          {/* 配送信息 */}
+          <Card size="small" title="配送信息" style={{ marginBottom: 16 }}>
+            <Form.Item
+              label="收件人姓名"
+              name="name"
+              rules={[{ required: true, message: '请输入收件人姓名' }]}
+            >
+              <Input placeholder="收件人姓名" />
+            </Form.Item>
+
+            <Form.Item
+              label="联系电话"
+              name="phone"
+              rules={[{ required: true, message: '请输入联系电话' }]}
+            >
+              <Input placeholder="联系电话" />
+            </Form.Item>
+
+            <Form.Item
+              label="详细地址"
+              name="address"
+              rules={[{ required: true, message: '请输入详细地址' }]}
+            >
+              <Input.TextArea rows={2} placeholder="详细地址" />
+            </Form.Item>
+          </Card>
+
+          {/* 商品列表 */}
+          <Card size="small" title="商品列表">
+            <Form.List name="products">
+              {(fields, { add, remove }) => (
+                <>
+                  {fields.map(({ key, name, ...restField }) => (
+                    <Card
+                      key={key}
+                      size="small"
+                      style={{ marginBottom: 16 }}
+                      extra={
+                        fields.length > 1 ? (
+                          <Button
+                            type="text"
+                            danger
+                            icon={<Minus size={16} />}
+                            onClick={() => remove(name)}
+                          />
+                        ) : null
+                      }
+                    >
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'productId']}
+                        label="商品ID"
+                        rules={[{ required: true, message: '请输入商品ID' }]}
+                      >
+                        <Input placeholder="商品ID" />
+                      </Form.Item>
+
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'name']}
+                        label="商品名称"
+                        rules={[{ required: true, message: '请输入商品名称' }]}
+                      >
+                        <Input placeholder="商品名称" />
+                      </Form.Item>
+
+                      <Form.Item {...restField} name={[name, 'description']} label="商品描述">
+                        <Input.TextArea rows={2} placeholder="商品描述" />
+                      </Form.Item>
+
+                      <Space style={{ width: '100%' }} size="middle">
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'price']}
+                          label="单价"
+                          rules={[{ required: true, message: '请输入单价' }]}
+                          style={{ flex: 1 }}
+                        >
+                          <InputNumber
+                            min={0}
+                            precision={2}
+                            style={{ width: '100%' }}
+                            prefix="¥"
+                            placeholder="单价"
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'amount']}
+                          label="数量"
+                          rules={[{ required: true, message: '请输入数量' }]}
+                          style={{ flex: 1 }}
+                        >
+                          <InputNumber min={1} style={{ width: '100%' }} placeholder="数量" />
+                        </Form.Item>
+                      </Space>
+                    </Card>
+                  ))}
+                  <Form.Item>
+                    <Button type="dashed" onClick={() => add()} block icon={<Plus size={16} />}>
+                      添加商品
+                    </Button>
+                  </Form.Item>
+                </>
+              )}
+            </Form.List>
+          </Card>
+        </Form>
+      </Modal>
 
       <main className="ml-60 px-10 py-6">
         <div className="flex flex-row justify-between gap-4">
@@ -521,15 +635,34 @@ const OrderDetailPage = () => {
                             index !== arr.length - 1 ? 'border-b pb-4' : ''
                           }`}
                         >
-                          <div className="flex-1">
-                            <div className="font-medium text-gray-900">{product.name}</div>
-                            {product.description && (
-                              <div className="mt-1 text-sm text-gray-500">
-                                {product.description}
+                          <div className="flex flex-1 items-center gap-4">
+                            {/* 商品图片 */}
+                            {product.imageUrl ? (
+                              <Image
+                                src={`${BASE_SERVER_URL}${product.imageUrl}`}
+                                width={80}
+                                height={80}
+                                style={{ objectFit: 'cover', borderRadius: 8 }}
+                                preview={false}
+                                alt={product.name}
+                              />
+                            ) : (
+                              <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gray-100 text-gray-400">
+                                <Package className="h-8 w-8" />
                               </div>
                             )}
-                            <div className="mt-1 text-sm text-gray-500">
-                              数量：x{product.quantity}
+
+                            {/* 商品信息 */}
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{product.name}</div>
+                              {product.description && (
+                                <div className="mt-1 text-sm text-gray-500">
+                                  {product.description}
+                                </div>
+                              )}
+                              <div className="mt-1 text-sm text-gray-500">
+                                数量：x{product.quantity}
+                              </div>
                             </div>
                           </div>
                           <div className="text-lg font-semibold text-gray-900">

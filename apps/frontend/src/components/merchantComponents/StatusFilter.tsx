@@ -44,7 +44,7 @@ export const StatusFilter: React.FC<StatusFilterProps> = ({
           icon={sort === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
           onClick={() => setSort?.(sort === 'asc' ? 'desc' : 'asc')}
         >
-          {sort === 'asc' ? '升序' : '降序'}
+          {sort === 'asc' ? '降序' : '升序'}
         </Button>
       </div>
 

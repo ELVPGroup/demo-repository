@@ -62,16 +62,16 @@ const Sidebar: React.FC = () => {
       onClick: () => navigate(`${base}/delivery-management`),
     },
     {
-      key: 'shipping',
-      icon: <MapPinHouse size={20} />,
-      label: '地址管理',
-      onClick: () => navigate(`${base}/shipping/list`),
-    },
-    {
       key: 'products',
       icon: <Store size={20} />,
       label: '商品管理',
       onClick: () => navigate(`${base}/products/list`),
+    },
+    {
+      key: 'shipping',
+      icon: <MapPinHouse size={20} />,
+      label: '发货地址管理',
+      onClick: () => navigate(`${base}/shipping/list`),
     },
     {
       key: 'logistics',
