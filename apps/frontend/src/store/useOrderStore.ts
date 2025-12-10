@@ -49,10 +49,11 @@ export const useOrderStore = create<OrderStore>((set, get) => ({
 
         // 根据后端返回的数据结构：data 是 OrderItem[] 数组
         const orders = res.data.data || [];
+        const total = res.data.total || orders.length; // 如果后端没有返回总数，使用当前数组长度
 
         set({
           orders,
-          total: orders.length, // 如果后端没有返回总数，使用当前数组长度
+          total,
         });
 
         console.log(res);

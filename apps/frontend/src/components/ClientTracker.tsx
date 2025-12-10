@@ -6,7 +6,10 @@ import AMapVisualization from './AMapVisualization';
 
 const ClientTracker: React.FC = () => {
   const [packageId, setPackageId] = useState(MOCK_PACKAGE_DATA.id);
-  const [trackingData, setTrackingData] = useState<PackageData>(MOCK_PACKAGE_DATA);
+  const [
+    trackingData,
+    // setTrackingData
+  ] = useState<PackageData>(MOCK_PACKAGE_DATA);
   const [zoom, setZoom] = useState(1);
 
   // 路线数据

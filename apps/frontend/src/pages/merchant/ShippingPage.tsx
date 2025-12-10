@@ -80,9 +80,9 @@ const ShippingPage: React.FC = () => {
       form.resetFields();
       setEditingAddress(null);
     } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message || '操作失败';
+      const errorMessage = (error as Error).message || '操作失败';
       message.error(errorMessage);
-      console.error('保存地址失败:', error);
+      console.error('保存地址失败');
     }
   };
 

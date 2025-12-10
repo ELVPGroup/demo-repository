@@ -2,7 +2,7 @@ import { type LogisticsProvider, type Order, OrderStatus, type PackageData } fro
 
 export const MOCK_PROVIDERS: LogisticsProvider[] = [
   {
-    id: 'blue-knight',
+    logisticsId: 'blue-knight',
     name: 'Blue Knight EV',
     type: 'EV',
     speed: 25, // km/h (City speed)
@@ -10,7 +10,7 @@ export const MOCK_PROVIDERS: LogisticsProvider[] = [
     color: 'bg-blue-500',
   },
   {
-    id: 'city-cargo',
+    logisticsId: 'city-cargo',
     name: 'Urban Cargo',
     type: 'Truck',
     speed: 15, // km/h (Slower due to traffic)
@@ -18,7 +18,7 @@ export const MOCK_PROVIDERS: LogisticsProvider[] = [
     color: 'bg-gray-700',
   },
   {
-    id: 'drone-express',
+    logisticsId: 'drone-express',
     name: 'Sky Drone',
     type: 'Drone',
     speed: 60, // km/h (Fast, linear)
@@ -67,6 +67,7 @@ export const MOCK_PACKAGE_DATA: PackageData = {
         'Courier [Master Wang 13800000000] is delivering to you, please keep your phone open.',
       completed: false,
       current: true,
+      currentLocation: true,
     },
     {
       id: '2',
@@ -77,6 +78,7 @@ export const MOCK_PACKAGE_DATA: PackageData = {
         'Express arrived at [Shanghai Xuhui Distribution Center], preparing to send to [Shanghai Xuhui Delivery Dept]',
       completed: true,
       current: false,
+      currentLocation: false,
     },
     {
       id: '3',
@@ -86,6 +88,7 @@ export const MOCK_PACKAGE_DATA: PackageData = {
       description: 'Express has departed from [Hangzhou Transfer Center]',
       completed: true,
       current: false,
+      currentLocation: false,
     },
     {
       id: '4',
@@ -95,7 +98,7 @@ export const MOCK_PACKAGE_DATA: PackageData = {
       description: 'Package picked up by courier',
       completed: true,
       current: false,
+      currentLocation: false,
     },
   ],
 };
-

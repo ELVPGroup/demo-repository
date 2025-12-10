@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Timeline, Typography, Card, Empty } from 'antd';
 import type { OrderTimelineItem } from '@/types/orderDetailInterface';
+import { themeTokens } from '@/theme/theme';
 
 const { Title } = Typography;
 
@@ -9,9 +10,24 @@ interface ShippingTimelineProps {
 }
 
 const ShippingTimeline: React.FC<ShippingTimelineProps> = ({ timeline = [] }) => {
+  // 将时间轴数据倒序排列，确保最新的状态在最上方
+  const sortedTimeline = useMemo(() => {
+    return [...timeline].reverse();
+  }, [timeline]);
+
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
     try {
-      const date = new Date(dateStr);
+      // 尝试解析日期，兼容 'YYYY-MM-DD HH:mm:ss' 格式（将空格替换为 T）
+      let date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        date = new Date(dateStr.replace(' ', 'T'));
+      }
+      
+      if (isNaN(date.getTime())) {
+        return dateStr;
+      }
+
       const now = new Date();
       const yesterday = new Date(now);
       yesterday.setDate(yesterday.getDate() - 1);
@@ -51,20 +67,31 @@ const ShippingTimeline: React.FC<ShippingTimelineProps> = ({ timeline = [] }) =>
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
       }}
     >
-      {timeline.length === 0 ? (
+      {sortedTimeline.length === 0 ? (
         <Empty description="暂无物流信息" />
       ) : (
         <Timeline
-          items={timeline.map((item, index) => ({
-            color: index === 0 ? 'blue' : 'gray',
-            children: (
-              <>
-                <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{item.shippingStatus}</div>
-                <div style={{ color: '#666', marginBottom: '4px' }}>{item.description}</div>
-                <div style={{ fontSize: '12px', color: '#999' }}>{formatDate(item.time)}</div>
-              </>
-            ),
-          }))}
+          items={sortedTimeline.map((item, index) => {
+            const isLatest = index === 0;
+            const color = isLatest ? (themeTokens.token?.colorPrimary as string || 'blue') : 'gray';
+            
+            return {
+              color,
+              children: (
+                <>
+                  <div style={{ 
+                    fontWeight: isLatest ? 'bold' : 'normal', 
+                    marginBottom: '4px',
+                    color: isLatest ? (themeTokens.token?.colorPrimary as string) : 'inherit'
+                  }}>
+                    {item.shippingStatus}
+                  </div>
+                  <div style={{ color: '#666', marginBottom: '4px' }}>{item.description}</div>
+                  <div style={{ fontSize: '12px', color: '#999' }}>{formatDate(item.time)}</div>
+                </>
+              ),
+            };
+          })}
         />
       )}
     </Card>

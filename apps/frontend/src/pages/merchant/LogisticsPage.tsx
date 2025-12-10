@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TopBar } from '@/components/merchantComponents/TopBar';
-import { Card, Button, Space, Spin, Tag, List, message, Popconfirm } from 'antd';
+import { Card, Button, Space, Spin, Tag, List, Popconfirm } from 'antd';
 import {
   ReloadOutlined,
   PlusOutlined,

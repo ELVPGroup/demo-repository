@@ -44,19 +44,21 @@ const ProductList: React.FC<ProductListProps> = ({ products = [] }) => {
               }}
             >
               {/* 商品图片占位 */}
-              {product.imageUrl ? (
-                <Image
-                  src={`${BASE_SERVER_URL}${product.imageUrl}`}
-                  width={56}
-                  height={56}
-                  style={{ objectFit: 'cover', borderRadius: 8, marginRight: 12 }}
-                  preview={false}
-                />
-              ) : (
-                <div className="mr-3 flex h-14 w-14 items-center justify-center rounded-md bg-gray-100 font-semibold">
-                  {product.name.slice(0, 1)}
-                </div>
-              )}
+              <div className="mr-3">
+                {product.imageUrl ? (
+                  <Image
+                    src={`${BASE_SERVER_URL}${product.imageUrl}`}
+                    width={56}
+                    height={56}
+                    style={{ objectFit: 'cover', borderRadius: 8, marginRight: 12 }}
+                    preview={false}
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-md bg-gray-100 font-semibold">
+                    {product.name.slice(0, 1)}
+                  </div>
+                )}
+              </div>
 
               {/* 商品信息 */}
               <div style={{ flex: 1 }}>
@@ -64,7 +66,7 @@ const ProductList: React.FC<ProductListProps> = ({ products = [] }) => {
                 <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>
                   {product.description}
                 </div>
-                <Text type="secondary">x{product.amount}</Text>
+                <Text type="secondary">x{product.quantity}</Text>
               </div>
 
               {/* 商品价格 */}

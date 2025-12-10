@@ -107,10 +107,16 @@ class ProductService {
       orderBy: { productId: 'desc' },
       include: { merchant: { select: { name: true } } },
     });
-    return products.map((product) => ({
+    const total = await prisma.product.count({
+      ...(params.productName !== undefined
+        ? { where: { name: { contains: params.productName } } }
+        : {}),
+    });
+    const data = products.map((product) => ({
       ...this.generateProvideProductStruct(product),
       merchantName: product.merchant?.name ?? '',
     }));
+    return { data, total };
   }
 }
 

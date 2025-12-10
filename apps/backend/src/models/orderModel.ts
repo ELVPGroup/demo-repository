@@ -17,6 +17,10 @@ export class OrderModel {
     });
   }
 
+  async count(params: Prisma.OrderCountArgs) {
+    return prisma.order.count(params);
+  }
+
   // 查询订单详情需要的Payload
   private findByIdDetailPayload = {
     include: {

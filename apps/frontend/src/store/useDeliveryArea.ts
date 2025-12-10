@@ -39,7 +39,7 @@ interface DeliveryAreaStore {
   error: string | null;
   
   // 获取配送区域信息
-  fetchDeliveryArea: (merchantId?: string) => Promise<void>;
+  fetchDeliveryArea: (merchantId?: string) => Promise<boolean>;
   
   // 获取供应商列表
   fetchLogisticsSuppliers: () => Promise<LogisticsSupplier[]>;
