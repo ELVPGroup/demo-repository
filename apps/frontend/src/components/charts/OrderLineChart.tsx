@@ -1,23 +1,33 @@
-import ReactECharts from "echarts-for-react";
+import ReactECharts from 'echarts-for-react';
+import type { DeliveryEfficiencyItem } from '../../types/dashboard';
 
-const OrderLineChart = () => {
+interface OrderLineChartProps {
+  data?: DeliveryEfficiencyItem[];
+}
+
+const OrderLineChart = ({ data }: OrderLineChartProps) => {
+  if (!data) return null;
+
   const option = {
-    title: { text: "订单数量变化（折线图）" },
-    tooltip: { trigger: "axis" },
-    xAxis: { type: "category", data: ["1日", "2日", "3日", "4日", "5日", "6日", "7日"] },
-    yAxis: { type: "value" },
+    title: { text: '配送时效分析视图 (平均配送时长/小时)' },
+    tooltip: { trigger: 'axis' },
+    xAxis: {
+      type: 'category',
+      data: data.map((item) => item.date),
+    },
+    yAxis: { type: 'value' },
     series: [
       {
-        name: "订单数",
-        type: "line",
+        name: '平均配送时长(小时)',
+        type: 'line',
         smooth: true,
-        data: [120, 98, 150, 180, 160, 200, 230],
+        data: data.map((item) => item.avgDeliveryTime),
       },
     ],
   };
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow">
+    <div className="rounded-xl bg-white p-4 shadow">
       <ReactECharts option={option} style={{ height: 320 }} />
     </div>
   );

@@ -1,25 +1,32 @@
-import ReactECharts from "echarts-for-react";
+import ReactECharts from 'echarts-for-react';
+import type { SalesTrendItem } from '@/types/dashboard';
 
-const SalesBarChart = () => {
+interface SalesBarChartProps {
+  data?: SalesTrendItem[];
+}
+
+const SalesBarChart = ({ data }: SalesBarChartProps) => {
+  if (!data) return null;
+
   const option = {
-    title: { text: "订单总额变化（柱状图）" },
+    title: { text: '7日内订单总额视图' },
     tooltip: {},
     xAxis: {
-      type: "category",
-      data: ["1日", "2日", "3日", "4日", "5日", "6日", "7日"],
+      type: 'category',
+      data: data.map((item) => item.date),
     },
-    yAxis: { type: "value" },
+    yAxis: { type: 'value' },
     series: [
       {
-        name: "销售额",
-        type: "bar",
-        data: [4300, 5800, 6100, 7400, 6900, 7800, 8200],
+        name: '销售额',
+        type: 'bar',
+        data: data.map((item) => item.amount),
       },
     ],
   };
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow">
+    <div className="rounded-xl bg-white p-4 shadow">
       <ReactECharts option={option} style={{ height: 320 }} />
     </div>
   );

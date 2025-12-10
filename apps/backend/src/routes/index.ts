@@ -6,6 +6,7 @@ import merchantShippingRouter from './merchant/shipping.js';
 import merchantDeliveryAreaRouter from './merchant/deliveryArea.js';
 import merchantLogisticsProviderRouter from './merchant/logisticsProvider.js';
 import merchantProductsRouter from './merchant/products.js';
+import merchantDashboardRouter from './merchant/dashboard.js';
 import userOrderRouter from './client/orders.js';
 import clientProductsRouter from './client/products.js';
 import uploadRouter from './upload.js';
@@ -21,6 +22,7 @@ export const routers: Router[] = [
   merchantDeliveryAreaRouter,
   merchantLogisticsProviderRouter,
   merchantProductsRouter,
+  merchantDashboardRouter,
   clientProductsRouter,
   userOrderRouter,
   uploadRouter,
