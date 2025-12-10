@@ -119,6 +119,11 @@ export const orderStatusColors = {
     text: "#1E40AF", // 深蓝色文字
     border: "#93C5FD", // 蓝色边框（可选）
   },
+  已送达: {
+    bg: "#E9D5FF", // 浅紫色背景
+    text: "#6B21A8", // 深紫色文字
+    border: "#C084FC", // 紫色边框（可选）
+  },
   已完成: {
     bg: "#D1FAE5", // 浅绿色背景
     text: "#065F46", // 深绿色文字
