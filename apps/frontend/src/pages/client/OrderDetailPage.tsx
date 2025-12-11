@@ -45,7 +45,7 @@ const OrderDetailPage = () => {
           await confirmReceipt(orderId);
           message.success('确认收货成功');
           navigate('/client/orders');
-        } catch (err) {
+        } catch {
           // 错误已经在 store 中处理，这里只需停止 loading
           message.error('确认收货失败，请稍后重试');
         } finally {
@@ -84,7 +84,7 @@ const OrderDetailPage = () => {
 
           <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-4">
             {/* 自动收货倒计时 - 仅在运输中且有倒计时时间时显示 */}
-            {order?.status === '运输中' && countdown > Date.now() && (
+            {(order?.status === '运输中' || order?.status === '已送达') && countdown > Date.now() && (
                <div className="flex items-center gap-1 text-xs text-orange-500 sm:text-sm">
                  <Clock size={14} className="sm:w-4 sm:h-4" />
                  <span>自动收货：</span>
@@ -102,18 +102,17 @@ const OrderDetailPage = () => {
 
             <div className="flex gap-2">
             {/* 确认收货按钮 - 运输中可点击，已签收禁用显示 */}
-            {(order?.status === '运输中' || order?.status === '已签收') && (
+            {(order?.status === '运输中' || order?.status === '已送达') && (
               <Button
                 type={order?.status === '运输中' ? 'primary' : 'default'}
                 onClick={handleConfirmReceipt}
-                disabled={order?.status === '已签收'}
                 loading={confirmLoading}
                 icon={<CheckCircle size={16} />}
                 size="small"
                 className="sm:h-8 sm:px-3 sm:text-sm"
                 style={{ height: '32px' }}
               >
-                {order?.status === '已签收' ? '已签收' : '确认收货'}
+                确认收货
               </Button>
             )}
 

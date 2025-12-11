@@ -16,7 +16,7 @@ import { productModel } from '@/models/productModel.js';
 import { addressService } from '@/services/addressService.js';
 import { generateServiceId } from '@/utils/serverIdHandler.js';
 import { ServiceKey } from '@/utils/serverIdHandler.js';
-import { getDictName, orderStatusDict, shippingStatusDict } from '@evlp/shared/utils/dicts.js';
+import { getDictName, orderStatusDict } from '@evlp/shared/utils/dicts.js';
 import {
   haversineDistanceMeters,
   parseAmapPolyline,
@@ -570,9 +570,9 @@ export class OrderService {
       })),
       amount,
       totalPrice: Number(order.totalPrice),
-      shippingStatus: latest ? getDictName(latest.shippingStatus, shippingStatusDict) : undefined,
+      shippingStatus: latest ? getDictName(latest.shippingStatus, orderStatusDict) : undefined,
       timeline: timeline.map((timelineItem) => ({
-        shippingStatus: getDictName(timelineItem.shippingStatus, shippingStatusDict),
+        shippingStatus: getDictName(timelineItem.shippingStatus, orderStatusDict),
         time: dayjs(timelineItem.time).format('YYYY-MM-DD HH:mm:ss'),
         description: timelineItem.description ?? '',
       })),

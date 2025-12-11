@@ -130,7 +130,7 @@ const RouteMap: React.FC<RouteMapProps> = ({
                 {startLocation.name} → {endLocation.name}
               </div>
             </div>
-            <div className="rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
+            <div className="w-24 rounded-full bg-green-100 px-2 py-1 text-center text-xs font-medium text-green-700">
               {status}
             </div>
           </div>

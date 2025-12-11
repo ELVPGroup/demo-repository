@@ -1,7 +1,6 @@
 import type {
   GeoPoint,
   OrderStatus,
-  ShippingStatus,
   SimulationConfig,
   SimulationState,
 } from '@evlp/shared/types/index.js';
@@ -108,7 +107,7 @@ export class LogisticsService {
   private async handleShipingStatusChange(
     orderId: number,
     newOrderStatus: OrderStatus,
-    newShippingStatus: ShippingStatus,
+    newShippingStatus: OrderStatus,
     description: string
   ) {
     await prisma.$transaction(async (tx) => {

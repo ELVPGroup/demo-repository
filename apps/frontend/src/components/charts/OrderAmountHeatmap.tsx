@@ -8,7 +8,7 @@ import { point, polygon, multiPolygon } from '@turf/helpers';
 import type { FeatureCollection, Feature, Geometry } from 'geojson';
 
 // GeoJSON URL
-const CHINA_GEOJSON_URL = 'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json';
+const CHINA_GEOJSON_URL = '/map_100000_full.json';
 
 interface DeliveryAreaOrder {
   amount: number;
