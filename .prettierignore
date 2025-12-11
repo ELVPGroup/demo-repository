@@ -33,3 +33,6 @@ temp/
 
 # documentation
 **/*.md
+
+# Public JSON files
+apps/frontend/public/*.json
