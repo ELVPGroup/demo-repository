@@ -1,6 +1,6 @@
 import type { GeoPoint } from '@/types/index.js';
-import type { ShippingStatus, SimulationState } from '@evlp/shared/types/index.js';
-import { getDictName, shippingStatusDict } from '@evlp/shared/utils/dicts.js';
+import type { OrderStatus, SimulationState } from '@evlp/shared/types/index.js';
+import { getDictName, orderStatusDict } from '@evlp/shared/utils/dicts.js';
 import dayjs from 'dayjs';
 
 export interface RealtimeLocation {
@@ -16,14 +16,14 @@ export interface RealtimeLocation {
  * @returns 实时位置信息
  */
 export function generateRealtimeLocationFromState(state: SimulationState): RealtimeLocation {
-  const shippingStatus: ShippingStatus =
-    state.progress <= 0 ? 'PACKING' : state.progress < 1 ? 'SHIPPED' : 'DELIVERED';
+  const shippingStatus: OrderStatus =
+    state.progress <= 0 ? 'SHIPPED' : state.progress < 1 ? 'SHIPPED' : 'DELIVERED';
   return {
     location: state.location,
     timestamp: dayjs(Date.now()).format('YYYY-MM-DD HH:mm:ss'),
     shippingStatus: getDictName(
-      shippingStatus as keyof typeof shippingStatusDict,
-      shippingStatusDict
+      shippingStatus as keyof typeof orderStatusDict,
+      orderStatusDict
     ),
     progress: state.progress,
   };

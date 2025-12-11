@@ -2,14 +2,6 @@ export type GeoPoint = [number, number];
 
 export type OrderStatus = 'PENDING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELED';
 
-export type ShippingStatus =
-  | 'PENDING'
-  | 'PACKING'
-  | 'SHIPPED'
-  | 'IN_TRANSIT'
-  | 'DELIVERED'
-  | 'CANCELED';
-
 export interface ApiResponse<T = unknown> {
   code: number;
   message: string;

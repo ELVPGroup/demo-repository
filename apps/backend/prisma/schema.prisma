@@ -21,15 +21,6 @@ enum OrderStatus {
   CANCELED // 已取消
 }
 
-enum ShippingStatus {
-  PENDING // 待发货
-  PACKING // 已揽收
-  SHIPPED // 运输中
-  IN_TRANSIT // 派送中
-  DELIVERED // 已签收
-  CANCELED // 已取消
-}
-
 model User {
   // SERIAL - 🔑 PK, not null, unique, autoincrement
   userId    Int           @id @default(autoincrement()) @map("userId")
@@ -183,9 +174,9 @@ model TimelineItem {
   orderId     Int         @map("orderId")
   orderDetail OrderDetail @relation(fields: [orderId], references: [orderId])
 
-  shippingStatus ShippingStatus @default(PENDING)
-  time           DateTime       @default(now()) @db.Timestamptz(6)
-  description    String?        @map("description") @db.Text
+  shippingStatus OrderStatus @default(PENDING)
+  time           DateTime    @default(now()) @db.Timestamptz(6)
+  description    String?     @map("description") @db.Text
 
   @@map("timelineItems")
 }

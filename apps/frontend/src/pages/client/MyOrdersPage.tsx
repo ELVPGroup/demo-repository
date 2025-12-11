@@ -78,8 +78,8 @@ const MyOrdersPage: React.FC = () => {
       },
       已送达: {
         text: '已送达',
-        color: orderStatusColors['已完成']?.bg || orderStatusColors.default.bg,
-        textColor: orderStatusColors['已完成']?.text || orderStatusColors.default.text,
+        color: orderStatusColors['已送达']?.bg || orderStatusColors.default.bg,
+        textColor: orderStatusColors['已送达']?.text || orderStatusColors.default.text,
       },
       已完成: {
         text: '已完成',
@@ -292,7 +292,7 @@ const MyOrdersPage: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       render: (_: OrderStatus, record: OrderItem) => {
-        const displayStatus = statusOverrides[record.orderId]?.status || record.status;
+        const displayStatus = record.status;
         const config = getStatusConfig(displayStatus as OrderStatus | '已签收');
         return (
           <Tag color={config.color} style={{ color: config.textColor, border: 'none' }}>

@@ -39,7 +39,7 @@ export interface OrderTimelineItem {
   description: string;
 }
 
-export type ShippingStatus = '待发货' | '已揽收' | '运输中' | '派送中' | '已签收';
+export type ShippingStatus = '待发货' | '运输中' | '已送达' | '已完成' | '已取消';
 
 // 订单主体
 export interface OrderDetail {
