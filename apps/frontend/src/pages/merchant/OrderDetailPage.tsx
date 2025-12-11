@@ -172,14 +172,14 @@ const OrderDetailPage = () => {
   const getCurrentLocation = (): [number, number] | undefined => {
     if (!order) return undefined;
 
-    // 如果订单已送达或已完成，使用收货地址作为当前位置
-    if (order.status === '已送达' || order.status === '已完成') {
-      return order.shippingTo?.location;
+    // 如果订单已送达，使用收货地址作为当前位置
+    if (order.status === '已签收' || order.status === '已完成') {
+      return order.shippingTo?.location;    
     }
 
-    // 如果订单已发货但未送达，使用发货地址作为起点
-    if (order.status === '运输中') {
-      return order.shippingFrom?.location;
+    // 如果订单已发货但未送达，使用发货地址作为起点（或根据实际情况调整）
+    if (order.status === '运输中' || order.status === '已发货') {
+      return order.currentLocation || order.shippingFrom?.location;
     }
 
     // 默认使用发货地址
