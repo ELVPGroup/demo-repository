@@ -16,14 +16,16 @@ API文档：http://s8qihd9ypc.apifox.cn/
 ├── packages/
 │   └── shared/             # 公共类型定义、工具函数与中间件
 ├── docs/                   # 开发与数据库文档
-├── package.json        # 根级脚本与工具配置
-├── pnpm-workspace.yaml # Workspace 配置
+├── package.json            # 根级脚本与工具配置
+├── pnpm-workspace.yaml     # Workspace 配置
 └── README.md
 ```
 
-前端技术栈：React 19、TypeScript、Vite、Ant Design、Tailwind
-后端技术栈：Koa、Prisma、PostgreSQL、JWT、WebSocket
-模拟轨迹服务技术栈：Koa、TypeScript
+- 前端技术栈：React 19、TypeScript、Vite、Ant Design、Tailwind
+
+- 后端技术栈：Koa、Prisma、PostgreSQL、JWT、WebSocket
+
+- 模拟轨迹服务技术栈：Koa、TypeScript
 
 ## 环境要求
 
@@ -41,20 +43,22 @@ pnpm install
 
 1. 在 `apps/backend` 目录下创建环境文件：
    - 复制 `apps/backend/.env.example` 为 `.env`
-   - 根据实际情况修改 `DATABASE_URL`、`JWT_SECRET`、`PORT`、`AMAP_API_KEY`
+   - 根据实际情况修改 `DATABASE_URL`、`JWT_SECRET`、`PORT`、`AMAP_API_KEY`、`STATIC_DIR` 与 `SIMULATION_SERVICE_URL`
 
 2. 生成 Prisma Client：
    ```bash
-   pnpm --filter @elvp/backend prisma generate
+   cd apps/backend/
+   npx prisma generate
    ```
 
 3. 初始化/迁移数据库（本地开发）：
    ```bash
-   pnpm --filter @elvp/backend prisma migrate dev
+   cd apps/backend/
+   npx prisma migrate dev
    ```
    如在部署环境使用既有迁移，可改用：
    ```bash
-   pnpm --filter @elvp/backend prisma migrate deploy
+   npx  prisma migrate deploy
    ```
 
 4. 在 `apps/simulation-service` 目录下配置环境文件：
@@ -70,7 +74,7 @@ pnpm install
   ```bash
   pnpm dev:server
   ```
-  启动后访问 `http://localhost:3000`，WebSocket 默认 `ws://localhost:3000/ws`。
+  默认端口 `3000`
 
 - 启动前端（Vite Dev Server）：
   ```bash
@@ -82,23 +86,25 @@ pnpm install
   ```bash
   pnpm --filter @elvp/simulation-service dev
   ```
+  默认端口 `9001`
 
 ## 前端 API/WS 地址说明
 
-- REST API 基础地址当前在 `apps/frontend/src/utils/axios.ts` 中修改。本地开发修改为：
+- REST API 基础地址（`BASE_SERVER_URL`）当前在 `apps/frontend/src/config/index.ts` 中修改。本地开发修改为：
   ```ts
   // apps/frontend/src/utils/axios.ts
-  const BASE_URL = 'http://localhost:3000/api';
+  export const BASE_SERVER_URL = 'http://localhost:3000';
   ```
 
-- WebSocket 基础地址定义在 `apps/frontend/src/config/index.ts`（行 1）：
+- WebSocket 基础地址也定义在相同的文件下：
   ```ts
   export const BASE_WS_URL = 'ws://localhost:3000/ws';
   ```
 
-后端所有 REST 路由均以 `/api` 为前缀，例如：
-- 认证：`POST /api/login`、`GET /api/profile`
+后端所有 REST 路由均以 `/api` 为前缀，商家端、用户端专用的 API 分别再接上 `/merchant`、`/client` 前缀。例如：
+- 认证：`POST /api/login`
 - 商家订单：`POST /api/merchant/orders/list`、`GET /api/merchant/orders/detail/:orderId`
+- 用户订单：`POST /api/client/orders/list`
 
 ## 构建与预览
 
