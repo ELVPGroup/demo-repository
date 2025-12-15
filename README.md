@@ -1,6 +1,10 @@
 # 电商物流配送可视化平台 ELVP 前后端单仓（Monorepo）
 
-这是一个包含前端与后端的单仓项目，用于电商物流可视化与订单追踪。仓库采用 pnpm Workspace 管理，目录下包含：
+这是一个包含前端与后端的单仓项目，用于电商物流可视化与订单追踪。实现商家备货->用户下单->商家确认并模拟发货->模拟货物运输->用户实时追踪->确认收货的核心闭环。仓库采用 pnpm Workspace 管理。
+
+API文档：http://s8qihd9ypc.apifox.cn/
+
+体验地址：http://8.134.211.162/
 
 ## 项目结构
 
@@ -51,7 +55,7 @@ pnpm install
    如在部署环境使用既有迁移，可改用：
    ```bash
    pnpm --filter @elvp/backend prisma migrate deploy
-  ```
+   ```
 
 4. 在 `apps/simulation-service` 目录下配置环境文件：
    - 复制 `apps/simulation-service/.env.example` 为 `.env`
